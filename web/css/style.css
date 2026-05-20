@@ -277,3 +277,19 @@ main {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Face stats badge row */
+.face-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+}
+.face-stats span {
+    background: #eef;
+    color: #334;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    cursor: help;
+}
