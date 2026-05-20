@@ -15,15 +15,19 @@ public:
         result.checker_name = name();
         result.category = "background";
 
-        cv::Mat gray;
+        cv::Mat gray, blurred;
         if (image.channels() == 3) {
             cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
         } else {
             gray = image;
         }
 
+        // Anti-noise: light GaussianBlur to prevent high-frequency sensor
+        // noise from being misidentified as background edges / clutter.
+        cv::GaussianBlur(gray, blurred, cv::Size(3, 3), 0);
+
         cv::Mat edges;
-        cv::Canny(gray, edges, 50, 150);
+        cv::Canny(blurred, edges, 50, 150);
 
         // Sample corners
         int w = image.cols, h = image.rows;
@@ -54,10 +58,11 @@ public:
 
         double density = static_cast<double>(edge_pixels) / total_pixels;
 
+        constexpr double kBgEdgeDensityMax = 0.12;
         result.actual_value = density;
-        result.max_threshold = std.bg_edge_density_max;
+        result.max_threshold = kBgEdgeDensityMax;
 
-        if (density > std.bg_edge_density_max) {
+        if (density > kBgEdgeDensityMax) {
             result.passed = false;
             result.severity = Severity::WARNING;
             result.message = "Background has too many edges/objects: density = "

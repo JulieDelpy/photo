@@ -41,7 +41,7 @@ private:
 
     float computeEAR(const std::vector<cv::Point2f>& lm, int eye_start) const;
     float computeMAR(const std::vector<cv::Point2f>& lm) const;
-    void  estimateHeadPose(FaceInfo& info);
+    void  estimateHeadPose(FaceInfo& info, int img_width, int img_height);
     void  generateSyntheticLandmarks(FaceInfo& info);
 
     // Model objects

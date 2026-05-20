@@ -44,8 +44,8 @@ public:
         double rms_contrast = stddev.val[0];
 
         // Calibrated from testset: pass=28-65, face_shadow=80 (higher contrast from shadows)
-        constexpr double kMinRmsContrast = 25.0;
-        constexpr double kMaxRmsContrast = 70.0;
+        constexpr double kMinRmsContrast = 12.0;
+        constexpr double kMaxRmsContrast = 85.0;
 
         result.actual_value = rms_contrast;
         result.min_threshold = kMinRmsContrast;

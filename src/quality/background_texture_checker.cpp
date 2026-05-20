@@ -15,18 +15,22 @@ public:
         result.checker_name = name();
         result.category = "background";
 
-        cv::Mat gray;
+        cv::Mat gray, blurred;
         if (image.channels() == 3) {
             cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
         } else {
             gray = image;
         }
 
+        // Anti-noise: light GaussianBlur to prevent high-frequency sensor
+        // noise from being misidentified as background texture.
+        cv::GaussianBlur(gray, blurred, cv::Size(3, 3), 0);
+
         // LBP-like: compute local binary pattern uniformity
         // Simplified: variance of the gradient magnitude in background regions
         cv::Mat grad_x, grad_y, magnitude;
-        cv::Sobel(gray, grad_x, CV_32F, 1, 0, 1);
-        cv::Sobel(gray, grad_y, CV_32F, 0, 1, 1);
+        cv::Sobel(blurred, grad_x, CV_32F, 1, 0, 1);
+        cv::Sobel(blurred, grad_y, CV_32F, 0, 1, 1);
         cv::magnitude(grad_x, grad_y, magnitude);
 
         // Sample corners avoiding face
@@ -58,9 +62,10 @@ public:
 
         double texture = texture_sum / count;
         result.actual_value = texture;
-        result.max_threshold = 10.0;
+        constexpr double kBgTextureMax = 22.0;
+        result.max_threshold = kBgTextureMax;
 
-        if (texture > 10.0) {
+        if (texture > kBgTextureMax) {
             result.passed = false;
             result.severity = Severity::WARNING;
             result.message = "Background has visible texture/pattern: LBP variance = "

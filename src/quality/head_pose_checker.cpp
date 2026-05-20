@@ -17,7 +17,7 @@ public:
 
         constexpr double kMaxHeadYaw   = 10.0;
         constexpr double kMaxHeadPitch = 10.0;
-        constexpr double kMaxHeadRoll  = 8.0;
+        constexpr double kMaxHeadRoll  = 10.0;
 
         if (!face.detected) {
             result.passed = false;

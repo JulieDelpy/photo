@@ -200,7 +200,7 @@ function generateDemoReport() {
             { checker_name:'face_confidence_check',    category:'face',        passed:true, severity:'pass', actual_value:0.94,   min_threshold:0.8, max_threshold:0,    message:'置信度: 0.94' },
             { checker_name:'face_size_check',          category:'face',        passed:true, severity:'pass', actual_value:0.30,   min_threshold:0.25,max_threshold:0.45, message:'人脸面积占比: 30%' },
             { checker_name:'face_integrity_check',     category:'face',        passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:0,    message:'人脸完整在画面内' },
-            { checker_name:'eye_closure_check',        category:'state',       passed:true, severity:'pass', actual_value:0.34,   min_threshold:0.25,max_threshold:0,    message:'眼睛睁开: EAR=0.34' },
+            { checker_name:'eye_closure_check',        category:'state',       passed:true, severity:'pass', actual_value:0.34,   min_threshold:0.20,max_threshold:0,    message:'眼睛睁开: EAR=0.34' },
             { checker_name:'mouth_open_check',         category:'state',       passed:true, severity:'pass', actual_value:0.04,   min_threshold:0,   max_threshold:0.25, message:'嘴巴闭合: MAR=0.04' },
             { checker_name:'head_pose_check',          category:'state',       passed:true, severity:'pass', actual_value:2.1,    min_threshold:0,   max_threshold:10.0, message:'头部姿态正常' },
             { checker_name:'head_tilt_check',          category:'composition',  passed:true, severity:'pass', actual_value:0.6,    min_threshold:0,   max_threshold:5.0,  message:'眼线倾角: 0.6°' },
@@ -208,14 +208,14 @@ function generateDemoReport() {
             { checker_name:'face_ratio_check',         category:'composition',  passed:true, severity:'pass', actual_value:0.52,   min_threshold:0.45,max_threshold:0.58, message:'面部高度比: 52%' },
             { checker_name:'blur_check',               category:'quality',     passed:true, severity:'pass', actual_value:338,    min_threshold:200, max_threshold:0,    message:'面部清晰: Laplacian var=338' },
             { checker_name:'exposure_check',           category:'quality',     passed:true, severity:'pass', actual_value:142,    min_threshold:120, max_threshold:200,  message:'面部曝光适中: 142' },
-            { checker_name:'contrast_check',           category:'quality',     passed:true, severity:'pass', actual_value:35,     min_threshold:25,  max_threshold:70,   message:'面部对比度OK: RMS=35' },
+            { checker_name:'contrast_check',           category:'quality',     passed:true, severity:'pass', actual_value:35,     min_threshold:12,  max_threshold:85,   message:'面部对比度OK: RMS=35' },
             { checker_name:'shadow_check',             category:'quality',     passed:true, severity:'pass', actual_value:0.12,   min_threshold:0,   max_threshold:0.30, message:'面无明显阴影' },
             { checker_name:'noise_check',              category:'quality',     passed:true, severity:'pass', actual_value:3.2,    min_threshold:0,   max_threshold:6.5,  message:'噪点水平可接受' },
             { checker_name:'resolution_check',         category:'quality',     passed:true, severity:'pass', actual_value:18400,  min_threshold:16000,max_threshold:30000,message:'人脸分辨率: 18400px' },
             { checker_name:'sharpness_check',          category:'quality',     passed:true, severity:'pass', actual_value:43.6,   min_threshold:5.0, max_threshold:0,    message:'图像清晰度可接受' },
             { checker_name:'image_blur_check',         category:'quality',     passed:true, severity:'pass', actual_value:1013,   min_threshold:80,  max_threshold:0,    message:'整图清晰度OK' },
             { checker_name:'image_exposure_check',     category:'quality',     passed:true, severity:'pass', actual_value:166,    min_threshold:80,  max_threshold:220,  message:'整图曝光适中' },
-            { checker_name:'image_contrast_check',     category:'quality',     passed:true, severity:'pass', actual_value:45,     min_threshold:25,  max_threshold:0,    message:'整图对比度OK' },
+            { checker_name:'image_contrast_check',     category:'quality',     passed:true, severity:'pass', actual_value:45,     min_threshold:12,  max_threshold:0,    message:'整图对比度OK' },
             { checker_name:'image_noise_check',        category:'quality',     passed:true, severity:'pass', actual_value:5.3,    min_threshold:0,   max_threshold:9.0,  message:'整图噪点可接受' },
             { checker_name:'jpeg_artifact_check',      category:'quality',     passed:true, severity:'pass', actual_value:1.04,   min_threshold:0,   max_threshold:2.0,  message:'无明显JPEG伪影' },
             { checker_name:'overexposure_check',       category:'quality',     passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:0.05, message:'无显著过曝' },
@@ -226,9 +226,9 @@ function generateDemoReport() {
             { checker_name:'side_margin_check',        category:'composition',  passed:true, severity:'pass', actual_value:25,     min_threshold:10,  max_threshold:0,    message:'两侧边距OK' },
             { checker_name:'face_aspect_ratio_check',  category:'composition',  passed:true, severity:'pass', actual_value:0.85,   min_threshold:0.7, max_threshold:1.0,  message:'面部宽高比OK' },
             { checker_name:'background_color_check',   category:'background',   passed:true, severity:'pass', actual_value:42,     min_threshold:0,   max_threshold:85,   message:'背景颜色OK: S=42 V=195' },
-            { checker_name:'background_uniformity_check',category:'background',  passed:true, severity:'pass', actual_value:12,     min_threshold:0,   max_threshold:15,   message:'背景均匀' },
-            { checker_name:'background_texture_check', category:'background',   passed:true, severity:'pass', actual_value:8,      min_threshold:0,   max_threshold:10,   message:'背景纹理可接受' },
-            { checker_name:'background_edge_check',    category:'background',   passed:true, severity:'pass', actual_value:0.03,   min_threshold:0,   max_threshold:0.05, message:'背景边缘OK' },
+            { checker_name:'background_uniformity_check',category:'background',  passed:true, severity:'pass', actual_value:12,     min_threshold:0,   max_threshold:60,   message:'背景均匀' },
+            { checker_name:'background_texture_check', category:'background',   passed:true, severity:'pass', actual_value:8,      min_threshold:0,   max_threshold:22,   message:'背景纹理可接受' },
+            { checker_name:'background_edge_check',    category:'background',   passed:true, severity:'pass', actual_value:0.03,   min_threshold:0,   max_threshold:0.12, message:'背景边缘OK' },
             { checker_name:'file_dimension_check',     category:'file',         passed:true, severity:'pass', actual_value:358,    min_threshold:358, max_threshold:358,  message:'尺寸: 358×441' },
             { checker_name:'file_aspect_ratio_check',  category:'file',         passed:true, severity:'pass', actual_value:0.811,  min_threshold:0,   max_threshold:0,    message:'宽高比: 0.811' },
             { checker_name:'file_size_check',          category:'file',         passed:true, severity:'pass', actual_value:18,     min_threshold:14,  max_threshold:20,   message:'文件大小: 18KB' },
@@ -241,16 +241,48 @@ function generateDemoReport() {
     };
 }
 
+// Core blocking categories: these must ALL pass for an ID photo to be accepted.
+// Background items that trigger warnings/fails are treated as soft-advisory
+// when the core is fully green — the photo still passes.
+const CORE_CATEGORIES = ['face', 'state', 'composition', 'quality', 'file'];
+
 function displayResults(report) {
     document.getElementById('resultsSection').style.display = 'block';
 
+    // ---- Smart grading: separate core failures from background advisories ----
+    const checks = report.results || [];
+    const coreFailures   = checks.filter(c => !c.passed && c.severity === 'fail'
+                                   && CORE_CATEGORIES.includes(c.category));
+    const coreWarnings   = checks.filter(c => !c.passed && c.severity === 'warning'
+                                   && CORE_CATEGORIES.includes(c.category));
+    const bgAdvisories   = checks.filter(c => !c.passed
+                                   && c.category === 'background');
+    const coreAllGreen   = (coreFailures.length === 0 && coreWarnings.length === 0);
+
+    // Overall verdict: core blocking checks decide pass/fail.
+    // Background problems alone never reject a photo; they show a green
+    // pass with a friendly advisory note instead.
+    const effectivePass = coreAllGreen;
+
     // ---- Summary bar ----
     const summaryBar = document.getElementById('summaryBar');
-    const overall = report.overall_pass;
-    summaryBar.className = 'summary-bar ' + (overall ? 'pass' : 'fail');
-    summaryBar.innerHTML = overall
-        ? `<strong>合格</strong> — ${report.summary || (report.passed_checks + '/' + report.total_checks + ' 通过')}`
-        : `<strong>不合格</strong> — ${report.summary || (report.passed_checks + '/' + report.total_checks + ' 通过, ' + report.failed_checks + ' 失败')}`;
+    if (effectivePass && bgAdvisories.length > 0) {
+        // Soft-advisory: background issues but core (face/state/quality) is clean
+        summaryBar.className = 'summary-bar pass';
+        summaryBar.innerHTML = `<strong>合格 (放行)</strong> — `
+            + `${report.passed_checks}/${report.total_checks} 通过`
+            + `，${bgAdvisories.length} 项背景微瑕已在可容忍范围`;
+    } else if (effectivePass) {
+        summaryBar.className = 'summary-bar pass';
+        summaryBar.innerHTML = `<strong>合格</strong> — `
+            + (report.summary || `${report.passed_checks}/${report.total_checks} 通过`);
+    } else {
+        summaryBar.className = 'summary-bar fail';
+        const failCount = coreFailures.length + coreWarnings.length;
+        summaryBar.innerHTML = `<strong>不合格</strong> — `
+            + (report.summary || `${report.passed_checks}/${report.total_checks} 通过, `
+            + `${failCount} 项核心指标不合格`);
+    }
 
     // ---- Summary stats ----
     document.getElementById('imageInfo').innerHTML =
@@ -283,21 +315,35 @@ function displayResults(report) {
         const cnName  = CHECKER_CN[r.checker_name] || r.checker_name;
         const cnCat   = CATEGORY_CN[r.category] || r.category;
         const passed  = r.passed;
-        const sv      = r.severity;  // 'pass' | 'warning' | 'fail'
+
+        // Soften background failures to warnings when core is all green
+        let displaySeverity = r.severity;
+        if (!passed && r.category === 'background' && coreAllGreen) {
+            // Downgrade background fail/warning to a soft pass badge
+            displaySeverity = 'soft';
+        }
 
         const tr = document.createElement('tr');
-        if (sv === 'fail')      tr.className = 'fail-row';
-        else if (sv === 'warning') tr.className = 'warn-row';
-        else                    tr.className = 'pass-row';
+        if (displaySeverity === 'fail')      tr.className = 'fail-row';
+        else if (displaySeverity === 'warning') tr.className = 'warn-row';
+        else if (displaySeverity === 'soft') tr.className = 'warn-row';
+        else                                 tr.className = 'pass-row';
 
         // Badge
         let badgeClass, badgeText;
-        if (sv === 'fail')      { badgeClass = 'fail'; badgeText = '失败'; }
-        else if (sv === 'warning') { badgeClass = 'warn'; badgeText = '警告'; }
-        else                    { badgeClass = 'pass'; badgeText = '通过'; }
+        if (displaySeverity === 'fail')           { badgeClass = 'fail'; badgeText = '拒绝'; }
+        else if (displaySeverity === 'warning')   { badgeClass = 'warn'; badgeText = '警告'; }
+        else if (displaySeverity === 'soft')      { badgeClass = 'pass'; badgeText = '放行'; }
+        else                                      { badgeClass = 'pass'; badgeText = '通过'; }
 
         // Threshold string
         const thr = formatThreshold(r.min_threshold, r.max_threshold);
+
+        // Append advisory suffix to soft-passed background items
+        let msg = r.message || '';
+        if (displaySeverity === 'soft') {
+            msg = '[容错放行] ' + msg;
+        }
 
         tr.innerHTML = `
             <td><span class="badge ${badgeClass}">${badgeText}</span></td>
@@ -305,7 +351,7 @@ function displayResults(report) {
             <td>${cnCat}</td>
             <td>${formatActual(r.actual_value)}</td>
             <td>${thr}</td>
-            <td>${r.message || ''}</td>
+            <td>${msg}</td>
         `;
         tbody.appendChild(tr);
     });

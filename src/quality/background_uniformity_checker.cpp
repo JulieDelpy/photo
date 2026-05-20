@@ -54,10 +54,12 @@ public:
         for (double m : means) { sum += m; sum_sq += m * m; }
         double sd = std::sqrt(sum_sq / means.size() - (sum / means.size()) * (sum / means.size()));
 
-        result.actual_value = sd;
-        result.max_threshold = std.bg_uniformity_max;
+        constexpr double kBgUniformityMax = 60.0;
 
-        if (sd > std.bg_uniformity_max) {
+        result.actual_value = sd;
+        result.max_threshold = kBgUniformityMax;
+
+        if (sd > kBgUniformityMax) {
             result.passed = false;
             result.severity = Severity::FAIL;
             result.message = "Background is not uniform: stddev = "

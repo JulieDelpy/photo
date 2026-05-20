@@ -84,7 +84,7 @@ FaceInfo FaceAnalyzer::detect(const cv::Mat& image)
                 info.ear_left  = computeEAR(info.landmarks, 36);
                 info.ear_right = computeEAR(info.landmarks, 42);
                 info.mar       = computeMAR(info.landmarks);
-                estimateHeadPose(info);
+                estimateHeadPose(info, image.cols, image.rows);
             } else {
                 generateSyntheticLandmarks(info);
             }
@@ -100,7 +100,7 @@ FaceInfo FaceAnalyzer::detect(const cv::Mat& image)
             info.ear_left  = computeEAR(info.landmarks, 36);
             info.ear_right = computeEAR(info.landmarks, 42);
             info.mar       = computeMAR(info.landmarks);
-            estimateHeadPose(info);
+            estimateHeadPose(info, image.cols, image.rows);
         } else {
             generateSyntheticLandmarks(info);
         }
@@ -241,7 +241,7 @@ float FaceAnalyzer::computeMAR(const std::vector<cv::Point2f>& lm) const
 // ============================================================
 // Head pose (yaw/pitch/roll) via solvePnP
 // ============================================================
-void FaceAnalyzer::estimateHeadPose(FaceInfo& info)
+void FaceAnalyzer::estimateHeadPose(FaceInfo& info, int img_width, int img_height)
 {
     if (info.landmarks.size() < 68) {
         info.yaw = info.pitch = info.roll = 0.0f;
@@ -257,9 +257,12 @@ void FaceAnalyzer::estimateHeadPose(FaceInfo& info)
         info.landmarks[54]   // Right mouth corner
     };
 
-    double f = static_cast<double>(info.bbox.width);
-    double cx = info.bbox.x + info.bbox.width  / 2.0;
-    double cy = info.bbox.y + info.bbox.height / 2.0;
+    // Adaptive camera intrinsics from image dimensions.
+    // fx = fy = max(w,h) is a robust focal-length proxy for typical
+    // consumer cameras, avoiding bbox-size-dependent distortion.
+    double f  = static_cast<double>(std::max(img_width, img_height));
+    double cx = img_width / 2.0;
+    double cy = img_height / 2.0;
 
     cv::Mat K = (cv::Mat_<double>(3,3) << f, 0, cx, 0, f, cy, 0, 0, 1);
     cv::Mat D = cv::Mat::zeros(4, 1, CV_64F);

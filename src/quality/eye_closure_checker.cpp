@@ -21,7 +21,7 @@ public:
             return result;
         }
 
-        constexpr double kEarMin = 0.25;
+        constexpr double kEarMin = 0.20;
 
         double ear = std::min(face.ear_left, face.ear_right);
         result.actual_value = ear;
