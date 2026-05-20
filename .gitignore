@@ -1,0 +1,27 @@
+build/
+cb/
+cmake-build-*/
+.vs/
+.vscode/
+.claude/
+*.user
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+.DS_Store
+Thumbs.db
+out/
+debug/
+datateset/
+doc_output.txt
+*.docx
+# Large model files — download separately
+models/lbfmodel.yaml
+# Generated reports
+testset/*.json
+*.report.json
