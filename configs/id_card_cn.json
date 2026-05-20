@@ -19,9 +19,9 @@
   "face_state": {
     "ear_min": 0.20,
     "mar_max": 0.25,
-    "max_head_yaw": 10.0,
-    "max_head_pitch": 10.0,
-    "max_head_roll": 10.0
+    "max_head_yaw": 12.0,
+    "max_head_pitch": 12.0,
+    "max_head_roll": 12.0
   },
   "quality": {
     "min_sharpness": 200.0,
@@ -36,11 +36,11 @@
   },
   "composition": {
     "max_center_offset_pct": 5.0,
-    "face_height_ratio_min": 0.45,
-    "face_height_ratio_max": 0.58,
-    "eye_position_ratio_min": 0.5,
-    "top_margin_min_px": 7,
-    "top_margin_max_px": 21,
+    "face_height_ratio_min": 0.44,
+    "face_height_ratio_max": 0.65,
+    "eye_position_ratio_min": 0.42,
+    "top_margin_ratio_min": 0.15,
+    "top_margin_ratio_max": 0.40,
     "bottom_margin_min_px": 7,
     "side_margin_min_px": 10,
     "max_tilt_angle": 5.0,

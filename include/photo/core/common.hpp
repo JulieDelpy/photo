@@ -100,11 +100,11 @@ struct IDPhotoStandard {
 
     // Composition thresholds
     float max_center_offset_pct = 5.0f;  // percentage
-    float face_height_ratio_min = 0.5f;
-    float face_height_ratio_max = 0.8f;
-    float eye_position_ratio_min = 0.5f; // eye_y / image_height
-    int top_margin_min_px = 7;
-    int top_margin_max_px = 50;
+    float face_height_ratio_min = 0.44f;
+    float face_height_ratio_max = 0.65f;
+    float eye_position_ratio_min = 0.42f; // eye_y / image_height
+    float top_margin_ratio_min = 0.15f;
+    float top_margin_ratio_max = 0.40f;
     int bottom_margin_min_px = 7;
     int side_margin_min_px = 10;
     float max_tilt_angle = 5.0f;

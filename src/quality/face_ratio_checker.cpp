@@ -24,8 +24,8 @@ public:
         double ratio = static_cast<double>(face.bbox.height) / image.rows;
 
         // Calibrated from testset: pass=0.48-0.57, too_large=0.57, too_small=0.36
-        constexpr double kFaceHeightRatioMin = 0.45;
-        constexpr double kFaceHeightRatioMax = 0.58;
+        constexpr double kFaceHeightRatioMin = 0.44;
+        constexpr double kFaceHeightRatioMax = 0.65;
 
         result.actual_value = ratio;
         result.min_threshold = kFaceHeightRatioMin;

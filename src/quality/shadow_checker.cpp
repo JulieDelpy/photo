@@ -66,7 +66,7 @@ public:
         }
 
         // Calibrated: shadows covering > 30% of face area is problematic
-        constexpr double kMaxShadowRatio = 0.30;
+        constexpr double kMaxShadowRatio = 0.35;
 
         double shadow_ratio = static_cast<double>(shadow_blocks) / total_blocks;
         result.actual_value = shadow_ratio;

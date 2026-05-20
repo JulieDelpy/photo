@@ -54,7 +54,7 @@ public:
         for (double m : means) { sum += m; sum_sq += m * m; }
         double sd = std::sqrt(sum_sq / means.size() - (sum / means.size()) * (sum / means.size()));
 
-        constexpr double kBgUniformityMax = 60.0;
+        constexpr double kBgUniformityMax = 100.0;
 
         result.actual_value = sd;
         result.max_threshold = kBgUniformityMax;

@@ -110,8 +110,8 @@ inline void from_json(const nlohmann::json& j, IDPhotoStandard& s) {
         if (c.contains("face_height_ratio_min")) c.at("face_height_ratio_min").get_to(s.face_height_ratio_min);
         if (c.contains("face_height_ratio_max")) c.at("face_height_ratio_max").get_to(s.face_height_ratio_max);
         if (c.contains("eye_position_ratio_min")) c.at("eye_position_ratio_min").get_to(s.eye_position_ratio_min);
-        if (c.contains("top_margin_min_px")) c.at("top_margin_min_px").get_to(s.top_margin_min_px);
-        if (c.contains("top_margin_max_px")) c.at("top_margin_max_px").get_to(s.top_margin_max_px);
+        if (c.contains("top_margin_ratio_min")) c.at("top_margin_ratio_min").get_to(s.top_margin_ratio_min);
+        if (c.contains("top_margin_ratio_max")) c.at("top_margin_ratio_max").get_to(s.top_margin_ratio_max);
         if (c.contains("bottom_margin_min_px")) c.at("bottom_margin_min_px").get_to(s.bottom_margin_min_px);
         if (c.contains("side_margin_min_px")) c.at("side_margin_min_px").get_to(s.side_margin_min_px);
         if (c.contains("max_tilt_angle")) c.at("max_tilt_angle").get_to(s.max_tilt_angle);

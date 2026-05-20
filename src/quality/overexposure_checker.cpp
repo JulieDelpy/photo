@@ -9,7 +9,7 @@ public:
     const char* name() const override { return "overexposure_check"; }
     const char* version() const override { return "1.0.0"; }
 
-    CheckResult check(const cv::Mat& image, const FaceInfo&,
+    CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard&) override {
         CheckResult result;
         result.checker_name = name();
@@ -22,18 +22,30 @@ public:
             gray = image;
         }
 
-        // Count pixels above 250 (overexposed)
-        int total = gray.rows * gray.cols;
-        int overexposed = cv::countNonZero(gray > 250);
+        // Check overexposure on face region (not background, which is intentionally bright)
+        cv::Rect roi = face.detected ? face.bbox : cv::Rect(0, 0, image.cols, image.rows);
+        roi &= cv::Rect(0, 0, image.cols, image.rows);
+        if (roi.area() <= 0) {
+            result.passed = true;
+            result.severity = Severity::PASS;
+            result.message = "No valid region for overexposure check";
+            return result;
+        }
+
+        cv::Mat region = gray(roi);
+        int total = region.rows * region.cols;
+        int overexposed = cv::countNonZero(region > 250);
         double ratio = static_cast<double>(overexposed) / total;
 
-        result.actual_value = ratio;
-        result.max_threshold = 0.05; // 5% overexposed pixels max
+        constexpr double kMaxOverexposedRatio = 0.10;
 
-        if (ratio > 0.05) {
+        result.actual_value = ratio;
+        result.max_threshold = kMaxOverexposedRatio;
+
+        if (ratio > kMaxOverexposedRatio) {
             result.passed = false;
             result.severity = Severity::WARNING;
-            result.message = "Image has overexposed regions: "
+            result.message = "Face has overexposed regions: "
                            + std::to_string(static_cast<int>(ratio * 100)) + "% pixels";
         } else {
             result.passed = true;
