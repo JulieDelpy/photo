@@ -44,7 +44,7 @@ public:
         double noise_level = stddev.val[0];
 
         // Calibrated from testset: pass=3.6-5.4, glasses=7.1-7.3
-        constexpr double kMaxNoiseStddev = 6.5;
+        constexpr double kMaxNoiseStddev = 5.5;
 
         result.actual_value = noise_level;
         result.min_threshold = 0.0;

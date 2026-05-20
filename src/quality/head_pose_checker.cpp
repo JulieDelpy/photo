@@ -15,9 +15,9 @@ public:
         result.checker_name = name();
         result.category = "state";
 
-        constexpr double kMaxHeadYaw   = 12.0;
-        constexpr double kMaxHeadPitch = 12.0;
-        constexpr double kMaxHeadRoll  = 12.0;
+        constexpr double kMaxHeadYaw   = 10.0;
+        constexpr double kMaxHeadPitch = 9.0;
+        constexpr double kMaxHeadRoll  = 11.8;
 
         if (!face.detected) {
             result.passed = false;

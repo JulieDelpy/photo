@@ -58,7 +58,7 @@ public:
 
         double density = static_cast<double>(edge_pixels) / total_pixels;
 
-        constexpr double kBgEdgeDensityMax = 0.15;
+        constexpr double kBgEdgeDensityMax = 0.10;
         result.actual_value = density;
         result.max_threshold = kBgEdgeDensityMax;
 

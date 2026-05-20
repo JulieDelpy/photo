@@ -22,18 +22,19 @@ public:
             return result;
         }
 
-        constexpr double kMarMax = 0.25;
-        constexpr int    kInnerMouthVThreshold = 80;  // V < 80 → dark oral cavity
+        constexpr double kMarTier1 = 0.25;  // definitely open → check oral cavity
+        constexpr double kMarTier2 = 0.18;  // borderline   → check dark only
+        constexpr int    kInnerMouthVDark  = 80;   // V < 80  → dark oral cavity
+        constexpr int    kInnerMouthVBright = 160; // V > 160 → bright teeth
 
         result.actual_value = face.mar;
-        result.max_threshold = kMarMax;
+        result.max_threshold = kMarTier1;
 
-        if (face.mar > kMarMax) {
-            // Differentiate thick lips from a genuinely open mouth:
-            // sample the inner-oral-cavity region (landmarks 61-67) in
-            // HSV V-channel.  Only flag as "open" if the interior is
-            // actually dark (oral shadow), not skin-coloured (thick lips).
+        if (face.mar > kMarTier2) {
             bool mouth_interior_dark = false;
+            bool mouth_interior_bright = false;
+            double oral_v = 0;
+
             if (face.landmarks.size() >= 68) {
                 std::vector<cv::Point> inner_pts;
                 for (int i = 61; i <= 67; i++)
@@ -46,25 +47,35 @@ public:
                         cv::Mat hsv, v_channel;
                         cv::cvtColor(roi, hsv, cv::COLOR_BGR2HSV);
                         cv::extractChannel(hsv, v_channel, 2);
-                        double mean_v = cv::mean(v_channel).val[0];
-                        mouth_interior_dark = (mean_v < kInnerMouthVThreshold);
+                        oral_v = cv::mean(v_channel).val[0];
+                        mouth_interior_dark = (oral_v < kInnerMouthVDark);
+                        mouth_interior_bright = (oral_v > kInnerMouthVBright);
                     }
                 }
             }
 
-            if (mouth_interior_dark) {
+            // Tier 1: definitely open → dark cavity OR bright teeth both fail
+            // Tier 2: borderline → only dark cavity fails (avoids false positives on thick lips)
+            bool tier1 = (face.mar > kMarTier1);
+            bool fail_dark = mouth_interior_dark;
+            bool fail_bright = tier1 && mouth_interior_bright;
+
+            if (fail_dark) {
                 result.passed = false;
                 result.severity = Severity::FAIL;
                 result.message = "Mouth open: MAR = "
                                + std::to_string(face.mar).substr(0, 4)
-                               + " > " + std::to_string(kMarMax)
-                               + " (oral cavity dark, genuine open mouth)";
+                               + " (oral cavity dark V=" + std::to_string(static_cast<int>(oral_v)) + ")";
+            } else if (fail_bright) {
+                result.passed = false;
+                result.severity = Severity::FAIL;
+                result.message = "Teeth showing / exaggerated expression: MAR = "
+                               + std::to_string(face.mar).substr(0, 4)
+                               + " (oral cavity bright V=" + std::to_string(static_cast<int>(oral_v)) + ")";
             } else {
                 result.passed = true;
                 result.severity = Severity::PASS;
-                result.message = "Mouth MAR elevated but oral cavity not dark"
-                               " (likely thick lips, not open mouth): MAR = "
-                               + std::to_string(face.mar).substr(0, 4);
+                result.message = "Mouth state OK: MAR = " + std::to_string(face.mar).substr(0, 4);
             }
         } else {
             result.passed = true;

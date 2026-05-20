@@ -62,7 +62,7 @@ public:
 
         double texture = texture_sum / count;
         result.actual_value = texture;
-        constexpr double kBgTextureMax = 22.0;
+        constexpr double kBgTextureMax = 16.0;
         result.max_threshold = kBgTextureMax;
 
         if (texture > kBgTextureMax) {

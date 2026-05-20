@@ -19,9 +19,9 @@
   "face_state": {
     "ear_min": 0.20,
     "mar_max": 0.25,
-    "max_head_yaw": 12.0,
-    "max_head_pitch": 12.0,
-    "max_head_roll": 12.0
+    "max_head_yaw": 10.0,
+    "max_head_pitch": 9.0,
+    "max_head_roll": 10.0
   },
   "quality": {
     "min_sharpness": 200.0,
@@ -50,7 +50,7 @@
   "background": {
     "expected_s_max": 85,
     "expected_v_min": 150,
-    "uniformity_max": 60.0,
+    "uniformity_max": 95.0,
     "edge_density_max": 0.15
   },
   "checks": [
