@@ -96,6 +96,17 @@ add_executable(photo_tool
 )
 target_link_libraries(photo_tool PRIVATE photo_core)
 
+# Web server — C++ native HTTP API + static file hosting
+add_executable(photo_web_server
+    src/web_server.cpp
+    $<TARGET_OBJECTS:photo_quality>
+    $<TARGET_OBJECTS:photo_beauty>
+)
+target_link_libraries(photo_web_server PRIVATE
+    photo_core
+    httplib::httplib
+)
+
 # Tests
 if(PHOTO_BUILD_TESTS)
     enable_testing()
