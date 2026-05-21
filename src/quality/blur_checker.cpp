@@ -17,7 +17,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face blur";
             return result;
         }
@@ -26,7 +26,7 @@ public:
         cv::Rect roi = face.bbox & cv::Rect(0, 0, image.cols, image.rows);
         if (roi.area() <= 0) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face bounding box is invalid";
             return result;
         }
@@ -55,7 +55,7 @@ public:
 
         if (laplacian_var < kMinSharpness) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face region is blurry: Laplacian var = "
                            + std::to_string(static_cast<int>(laplacian_var))
                            + " < " + std::to_string(static_cast<int>(kMinSharpness));

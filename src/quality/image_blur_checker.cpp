@@ -34,7 +34,7 @@ public:
 
         if (var < 80.0) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Whole image is blurry: Laplacian var = "
                            + std::to_string(static_cast<int>(var));
         } else {

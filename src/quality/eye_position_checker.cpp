@@ -16,7 +16,7 @@ public:
 
         if (!face.detected || face.landmarks.size() < 68) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No landmarks available; cannot check eye position";
             return result;
         }
@@ -37,7 +37,7 @@ public:
 
         if (eye_ratio < std.eye_position_ratio_min) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Eyes too high in frame: eye position ratio = "
                            + std::to_string(eye_ratio).substr(0, 4);
         } else {

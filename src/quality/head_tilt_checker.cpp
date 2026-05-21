@@ -26,7 +26,7 @@ public:
             result.max_threshold = kMaxTiltAngle;
             if (roll > kMaxTiltAngle) {
                 result.passed = false;
-                result.severity = Severity::FAIL;
+                result.severity = Severity::WARNING;
                 result.message = "Head tilted: roll = " + std::to_string(roll).substr(0,4) + " deg";
             } else {
                 result.passed = true;
@@ -51,7 +51,7 @@ public:
 
         if (angle > kMaxTiltAngle) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Head tilted: eye-line angle = "
                            + std::to_string(angle).substr(0,4) + " deg";
         } else {

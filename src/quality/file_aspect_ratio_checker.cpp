@@ -30,7 +30,7 @@ public:
 
         if (diff > 0.01) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Wrong aspect ratio: "
                            + std::to_string(actual_ar).substr(0,5)
                            + " (expected " + std::to_string(expected_ar).substr(0,5) + ")";

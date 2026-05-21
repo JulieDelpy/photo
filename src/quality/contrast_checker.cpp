@@ -17,7 +17,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face contrast";
             return result;
         }
@@ -25,7 +25,7 @@ public:
         cv::Rect roi = face.bbox & cv::Rect(0, 0, image.cols, image.rows);
         if (roi.area() <= 0) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face bounding box is invalid";
             return result;
         }
@@ -53,13 +53,13 @@ public:
 
         if (rms_contrast < kMinRmsContrast) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face contrast too low: RMS contrast = "
                            + std::to_string(static_cast<int>(rms_contrast))
                            + " < " + std::to_string(static_cast<int>(kMinRmsContrast));
         } else if (rms_contrast > kMaxRmsContrast) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face contrast too high (possible shadows): RMS contrast = "
                            + std::to_string(static_cast<int>(rms_contrast))
                            + " > " + std::to_string(static_cast<int>(kMaxRmsContrast));

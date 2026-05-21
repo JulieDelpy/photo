@@ -23,7 +23,7 @@ public:
             result.message = "Color space: RGB (3 channels)";
         } else if (channels == 1) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Image is grayscale; color photo required";
         } else if (channels == 4) {
             result.passed = true;
@@ -31,7 +31,7 @@ public:
             result.message = "Color space: RGBA (4 channels)";
         } else {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Unknown color space: " + std::to_string(channels) + " channels";
         }
         return result;

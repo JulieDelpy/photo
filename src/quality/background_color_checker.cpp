@@ -57,7 +57,7 @@ public:
 
         if (valid_regions == 0) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Cannot sample background: face covers entire image";
             return result;
         }
@@ -83,7 +83,7 @@ public:
                            + " V=" + std::to_string(static_cast<int>(v_mean));
         } else {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Background color不符合要求: S=" + std::to_string(static_cast<int>(s_mean))
                            + " V=" + std::to_string(static_cast<int>(v_mean));
         }

@@ -16,7 +16,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face integrity";
             return result;
         }
@@ -33,7 +33,7 @@ public:
 
         if (clipped_edges > 0) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             std::string edges;
             if (clipped_left) edges += "left ";
             if (clipped_right) edges += "right ";

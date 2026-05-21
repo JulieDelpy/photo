@@ -16,7 +16,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check side margins";
             return result;
         }
@@ -30,7 +30,7 @@ public:
 
         if (left_margin < std.side_margin_min_px || right_margin < std.side_margin_min_px) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Side margin too small: left="
                            + std::to_string(left_margin) + "px right="
                            + std::to_string(right_margin) + "px";

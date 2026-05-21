@@ -16,7 +16,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face resolution";
             return result;
         }
@@ -36,7 +36,7 @@ public:
 
         if (face_pixel_area < kMinFacePixels) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face resolution too low: "
                            + std::to_string(static_cast<int>(face_pixel_area))
                            + " pixels < " + std::to_string(kMinFacePixels);

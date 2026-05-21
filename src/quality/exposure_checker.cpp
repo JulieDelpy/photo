@@ -17,7 +17,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face exposure";
             return result;
         }
@@ -25,7 +25,7 @@ public:
         cv::Rect roi = face.bbox & cv::Rect(0, 0, image.cols, image.rows);
         if (roi.area() <= 0) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face bounding box is invalid";
             return result;
         }
@@ -51,13 +51,13 @@ public:
 
         if (brightness < kExposureMin) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face underexposed: mean brightness = "
                            + std::to_string(static_cast<int>(brightness))
                            + " < " + std::to_string(static_cast<int>(kExposureMin));
         } else if (brightness > kExposureMax) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face overexposed: mean brightness = "
                            + std::to_string(static_cast<int>(brightness))
                            + " > " + std::to_string(static_cast<int>(kExposureMax));

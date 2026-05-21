@@ -27,7 +27,7 @@ public:
             result.message = "Dimensions OK: " + std::to_string(image.cols) + "x" + std::to_string(image.rows);
         } else {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Wrong dimensions: " + std::to_string(image.cols) + "x" + std::to_string(image.rows)
                            + " (expected " + std::to_string(std.expected_width) + "x" + std::to_string(std.expected_height) + ")";
         }

@@ -17,7 +17,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check centering";
             return result;
         }
@@ -35,7 +35,7 @@ public:
 
         if (offset_pct > kMaxCenterOffsetPct) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face not centered horizontally: offset = "
                            + std::to_string(static_cast<int>(offset_pct)) + "%";
         } else {

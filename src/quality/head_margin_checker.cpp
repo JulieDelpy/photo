@@ -16,7 +16,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check head margin";
             return result;
         }
@@ -29,7 +29,7 @@ public:
 
         if (top_ratio < std.top_margin_ratio_min) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Head too close to top: ratio = "
                            + std::to_string(top_ratio).substr(0, 4)
                            + " < " + std::to_string(std.top_margin_ratio_min);

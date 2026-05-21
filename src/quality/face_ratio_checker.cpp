@@ -16,7 +16,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face height ratio";
             return result;
         }
@@ -33,12 +33,12 @@ public:
 
         if (ratio < kFaceHeightRatioMin) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face too small in frame: height ratio = "
                            + std::to_string(static_cast<int>(ratio * 100)) + "%";
         } else if (ratio > kFaceHeightRatioMax) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face too large in frame: height ratio = "
                            + std::to_string(static_cast<int>(ratio * 100)) + "%";
         } else {

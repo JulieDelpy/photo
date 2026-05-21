@@ -44,7 +44,7 @@ public:
 
         if (means.size() < 2) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Cannot measure background uniformity";
             return result;
         }
@@ -61,7 +61,7 @@ public:
 
         if (sd > kBgUniformityMax) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Background is not uniform: stddev = "
                            + std::to_string(static_cast<int>(sd));
         } else {

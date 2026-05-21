@@ -17,7 +17,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face shadows";
             return result;
         }
@@ -25,7 +25,7 @@ public:
         cv::Rect roi = face.bbox & cv::Rect(0, 0, image.cols, image.rows);
         if (roi.area() <= 0) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face bounding box is invalid";
             return result;
         }

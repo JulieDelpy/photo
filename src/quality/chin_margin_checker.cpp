@@ -16,7 +16,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check chin margin";
             return result;
         }
@@ -29,7 +29,7 @@ public:
 
         if (bottom_margin < std.bottom_margin_min_px) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Chin too close to bottom: margin = "
                            + std::to_string(bottom_margin) + "px";
         } else {

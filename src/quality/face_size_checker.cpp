@@ -16,7 +16,7 @@ public:
 
         if (!face.detected) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "No face detected; cannot check face size";
             return result;
         }
@@ -35,13 +35,13 @@ public:
 
         if (ratio < kMinFaceAreaRatio) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face too small: area ratio = "
                            + std::to_string(static_cast<int>(ratio * 100))
                            + "% < " + std::to_string(static_cast<int>(kMinFaceAreaRatio * 100)) + "%";
         } else if (ratio > kMaxFaceAreaRatio) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "Face too large: area ratio = "
                            + std::to_string(static_cast<int>(ratio * 100))
                            + "% > " + std::to_string(static_cast<int>(kMaxFaceAreaRatio * 100)) + "%";

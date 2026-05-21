@@ -242,55 +242,162 @@ function generateDemoReport() {
 }
 
 // Core blocking categories: these must ALL pass for an ID photo to be accepted.
-// Background items that trigger warnings/fails are treated as soft-advisory
-// when the core is fully green — the photo still passes.
-const CORE_CATEGORIES = ['face', 'state', 'composition', 'quality', 'file'];
+// 硬阻断项: 人脸/表情/姿态，只有这 6 个 checker 能返回 FAIL
+const HARD_BLOCK_CHECKS = [
+    'face_detect_check', 'face_count_check', 'face_confidence_check',
+    'eye_closure_check', 'mouth_open_check', 'head_pose_check'
+];
+
+// ========================
+// 中文消息生成器 — 根据 checker 结构化数据生成专业中文描述
+// ========================
+function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, rawMsg) {
+    const cnName = CHECKER_CN[checkerName] || checkerName;
+
+    // 如果 C++ 返回的消息本身就是中文，直接使用
+    if (rawMsg && /[一-鿿]/.test(rawMsg)) return rawMsg;
+
+    const av = formatActual(actual);
+    const thr = formatThreshold(minVal, maxVal);
+
+    // 根据 checker 类型生成对应中文消息
+    switch (checkerName) {
+        // ---- 人脸 ----
+        case 'face_detect_check':
+            return passed ? '成功检测到人脸' : '未检测到人脸';
+        case 'face_count_check':
+            return passed ? `人脸数量: ${actual}` : `人脸数量异常: 检测到${actual}张人脸（要求1张）`;
+        case 'face_confidence_check':
+            return passed ? `人脸置信度: ${av}` : `人脸置信度过低: ${av}（要求≥${minVal}）`;
+        case 'face_size_check':
+            return passed ? `人脸面积占比: ${av}` : `人脸面积占比不合适: ${av}（要求${minVal}-${maxVal}）`;
+        case 'face_integrity_check':
+            return passed ? '人脸完整，均在画面边界内' : '人脸超出画面边界';
+
+        // ---- 表情姿态 ----
+        case 'eye_closure_check':
+            return passed ? `双眼睁开: EAR=${av}` : `疑似闭眼: EAR=${av}（阈值${minVal}）`;
+        case 'mouth_open_check':
+            return passed ? `嘴部状态正常: MAR=${av}` : rawMsg || `张嘴检测不合格: MAR=${av}`;
+        case 'head_pose_check':
+            if (passed) return `头部姿态正常: 偏转≤${maxVal}°`;
+            return rawMsg || `头部姿态超标: 最大值=${av}°`;
+
+        // ---- 画质 ----
+        case 'blur_check':
+            return passed ? `面部清晰: Laplacian方差=${av}` : `面部模糊: Laplacian方差=${av}（要求≥${minVal}）`;
+        case 'exposure_check':
+            return passed ? `面部曝光适中: 亮度=${av}` : `面部曝光异常: 亮度=${av}（要求${minVal}-${maxVal}）`;
+        case 'contrast_check':
+            return passed ? `面部对比度OK: RMS=${av}` : `面部对比度异常: RMS=${av}（要求${minVal}-${maxVal}）`;
+        case 'shadow_check':
+            return passed ? '面部光照均匀，无明显阴影' : `面部存在暗部阴影: 阴影比=${av}（阈值${maxVal}）`;
+        case 'noise_check':
+            return passed ? `面部噪点可接受: 标准差=${av}` : `面部噪点偏高: 标准差=${av}（阈值${maxVal}）`;
+        case 'resolution_check':
+            return passed ? `人脸分辨率充足: ${av} 像素` : `人脸分辨率不足: ${av} 像素（要求${minVal}-${maxVal}）`;
+        case 'overexposure_check':
+            return passed ? '无显著过曝区域' : rawMsg || `面部过曝: ${av}（阈值${maxVal}）`;
+        case 'underexposure_check':
+            return passed ? '无显著欠曝区域' : rawMsg || `面部欠曝: ${av}（阈值${maxVal}）`;
+        case 'sharpness_check':
+            return passed ? `图像清晰度可接受: Tenengrad=${av}` : `图像清晰度偏低: Tenengrad=${av}（要求≥${minVal}）`;
+        case 'image_blur_check':
+            return passed ? `整体图像清晰: Laplacian方差=${av}` : `整体图像模糊: Laplacian方差=${av}（要求≥${minVal}）`;
+        case 'image_exposure_check':
+            return passed ? `整体图像曝光适中: 均值=${av}` : `整体图像曝光异常: 均值=${av}（要求${minVal}-${maxVal}）`;
+        case 'image_contrast_check':
+            return passed ? `整体图像对比度OK: 标准差=${av}` : `整体图像对比度偏低: 标准差=${av}（要求≥${minVal}）`;
+        case 'image_noise_check':
+            return passed ? `整体图像噪点可接受: 标准差=${av}` : `整体图像噪点偏高: 标准差=${av}（阈值${maxVal}）`;
+        case 'jpeg_artifact_check':
+            return passed ? '无明显JPEG压缩伪影' : '检测到JPEG压缩伪影';
+
+        // ---- 构图 ----
+        case 'centering_check':
+            return passed ? `人脸居中: 偏移${av}%` : `人脸未居中: 偏移${av}%（阈值${maxVal}%）`;
+        case 'face_ratio_check':
+            return passed ? `面部高度比: ${av}` : `面部高度比不合适: ${av}（要求${minVal}-${maxVal}）`;
+        case 'eye_position_check':
+            return passed ? `眼睛纵向位置OK: ${av}` : `眼睛纵向位置偏下: ${av}（要求≥${minVal}）`;
+        case 'head_margin_check':
+            return passed ? `头顶留白OK: ${av}` : `头顶留白不合适: ${av}（要求${minVal}-${maxVal}）`;
+        case 'chin_margin_check':
+            return passed ? `下巴留白OK: ${av}px` : `下巴留白不足: ${av}px（要求≥${minVal}px）`;
+        case 'side_margin_check':
+            return passed ? `两侧留白OK` : `两侧留白不足（要求≥${minVal}px）`;
+        case 'head_tilt_check':
+            return passed ? `头部倾斜OK: ${av}°` : `头部倾斜: ${av}°（阈值${maxVal}°）`;
+        case 'face_aspect_ratio_check':
+            return passed ? `面部宽高比正常: ${av}` : `面部宽高比异常: ${av}（要求${minVal}-${maxVal}）`;
+
+        // ---- 背景 ----
+        case 'background_color_check':
+            return passed ? '背景颜色合格' : '背景颜色不符合证件照要求';
+        case 'background_uniformity_check':
+            return passed ? `背景均匀度OK: 标准差=${av}` : `背景不够均匀: 标准差=${av}（阈值${maxVal}）`;
+        case 'background_texture_check':
+            return passed ? `背景纹理可接受: 方差=${av}` : `背景纹理过多: 方差=${av}（阈值${maxVal}）`;
+        case 'background_edge_check':
+            return passed ? `背景边缘干净: 密度=${av}` : `背景存在边缘/杂物: 密度=${av}（阈值${maxVal}）`;
+
+        // ---- 文件规格 ----
+        case 'file_dimension_check':
+            return passed ? `图像尺寸OK: ${actual}px` : `建议裁剪至 ${maxVal}×${maxVal}`;
+        case 'file_aspect_ratio_check':
+            return passed ? `宽高比OK` : `宽高比偏离标准，建议裁剪至标准尺寸`;
+        case 'file_size_check':
+            return passed ? `文件大小OK: ${actual}KB` : `文件大小不合适: ${actual}KB`;
+        case 'file_format_check':
+            return passed ? '文件格式OK' : '文件格式不兼容，请使用JPEG格式';
+        case 'color_space_check':
+            return passed ? '色彩空间: RGB' : '请使用RGB色彩空间';
+        case 'dpi_check':
+            return passed ? `DPI: ${actual}` : `DPI异常: 期望${maxVal} DPI`;
+
+        default:
+            return rawMsg || `${cnName}: ${passed ? '正常' : '不合格'}`;
+    }
+}
 
 function displayResults(report) {
     document.getElementById('resultsSection').style.display = 'block';
 
-    // ---- Smart grading: separate core failures from background advisories ----
+    // ---- 两级智能判定 ----
+    // 后端已实现：硬阻断项(6个)可返回FAIL，边缘项返回WARNING
+    // overall_pass = (failed_checks == 0)
     const checks = report.results || [];
-    const coreFailures   = checks.filter(c => !c.passed && c.severity === 'fail'
-                                   && CORE_CATEGORIES.includes(c.category));
-    const coreWarnings   = checks.filter(c => !c.passed && c.severity === 'warning'
-                                   && CORE_CATEGORIES.includes(c.category));
-    const bgAdvisories   = checks.filter(c => !c.passed
-                                   && c.category === 'background');
-    const coreAllGreen   = (coreFailures.length === 0 && coreWarnings.length === 0);
+    const hardFails    = checks.filter(c => !c.passed && c.severity === 'fail'
+                                   && HARD_BLOCK_CHECKS.includes(c.checker_name));
+    const hardWarnings = checks.filter(c => !c.passed && c.severity === 'fail'
+                                   && HARD_BLOCK_CHECKS.includes(c.checker_name)); // fallback
+    const softAdvisory  = checks.filter(c => !c.passed && c.severity === 'warning');
+    const effectivePass = report.overall_pass !== false && hardFails.length === 0;
 
-    // Overall verdict: core blocking checks decide pass/fail.
-    // Background problems alone never reject a photo; they show a green
-    // pass with a friendly advisory note instead.
-    const effectivePass = coreAllGreen;
-
-    // ---- Summary bar ----
+    // ---- 摘要栏 ----
     const summaryBar = document.getElementById('summaryBar');
-    if (effectivePass && bgAdvisories.length > 0) {
-        // Soft-advisory: background issues but core (face/state/quality) is clean
+    if (effectivePass && softAdvisory.length > 0) {
         summaryBar.className = 'summary-bar pass';
         summaryBar.innerHTML = `<strong>合格 (放行)</strong> — `
-            + `${report.passed_checks}/${report.total_checks} 通过`
-            + `，${bgAdvisories.length} 项背景微瑕已在可容忍范围`;
+            + `${report.passed_checks}/${report.total_checks} 核心项通过`
+            + `，${softAdvisory.length} 项边缘建议可容忍`;
     } else if (effectivePass) {
         summaryBar.className = 'summary-bar pass';
         summaryBar.innerHTML = `<strong>合格</strong> — `
             + (report.summary || `${report.passed_checks}/${report.total_checks} 通过`);
     } else {
         summaryBar.className = 'summary-bar fail';
-        const failCount = coreFailures.length + coreWarnings.length;
         summaryBar.innerHTML = `<strong>不合格</strong> — `
-            + (report.summary || `${report.passed_checks}/${report.total_checks} 通过, `
-            + `${failCount} 项核心指标不合格`);
+            + `${hardFails.length} 项核心指标未达标`;
     }
 
-    // ---- Summary stats ----
+    // ---- 摘要统计 ----
     document.getElementById('imageInfo').innerHTML =
         `<p>${report.photo_display_name || report.photo_type} |
-         尺寸: ${(report.file_info || report).image_width || '?'}×${(report.file_info || report).image_height || '?'} |
-         通过: ${report.passed_checks} | 警告: ${report.warning_checks || 0} | 失败: ${report.failed_checks}</p>`;
+         尺寸: ${(report.file_info || report).width || '?'}×${(report.file_info || report).height || '?'} |
+         通过: ${report.passed_checks} | 警告: ${report.warning_checks || 0} | 拒绝: ${report.failed_checks}</p>`;
 
-    // ---- Face info (when available) ----
+    // ---- 人脸信息 ----
     const fi = report.face_info;
     if (fi && fi.detected) {
         const faceStats = document.createElement('div');
@@ -307,47 +414,44 @@ function displayResults(report) {
         infoEl.appendChild(faceStats);
     }
 
-    // ---- Results table ----
+    // ---- 结果表格 ----
     const tbody = document.getElementById('resultsBody');
     tbody.innerHTML = '';
 
-    report.results.forEach(r => {
+    checks.forEach(r => {
         const cnName  = CHECKER_CN[r.checker_name] || r.checker_name;
         const cnCat   = CATEGORY_CN[r.category] || r.category;
         const passed  = r.passed;
+        const isHard  = HARD_BLOCK_CHECKS.includes(r.checker_name);
 
-        // Soften background failures to warnings when core is all green
+        // 显示级别：硬阻断FAIL→红色，软WARNING→黄色
         let displaySeverity = r.severity;
-        if (!passed && r.category === 'background' && coreAllGreen) {
-            // Downgrade background fail/warning to a soft pass badge
-            displaySeverity = 'soft';
+        // 边缘项即使 C++ 返回 fail（已全部改为 warning），也按 warning 显示
+        if (!passed && !isHard && r.severity === 'fail') {
+            displaySeverity = 'warning';
         }
 
         const tr = document.createElement('tr');
         if (displaySeverity === 'fail')      tr.className = 'fail-row';
         else if (displaySeverity === 'warning') tr.className = 'warn-row';
-        else if (displaySeverity === 'soft') tr.className = 'warn-row';
         else                                 tr.className = 'pass-row';
 
-        // Badge
+        // 徽章
         let badgeClass, badgeText;
         if (displaySeverity === 'fail')           { badgeClass = 'fail'; badgeText = '拒绝'; }
-        else if (displaySeverity === 'warning')   { badgeClass = 'warn'; badgeText = '警告'; }
-        else if (displaySeverity === 'soft')      { badgeClass = 'pass'; badgeText = '放行'; }
+        else if (displaySeverity === 'warning')   { badgeClass = 'warn'; badgeText = '建议'; }
         else                                      { badgeClass = 'pass'; badgeText = '通过'; }
 
-        // Threshold string
         const thr = formatThreshold(r.min_threshold, r.max_threshold);
 
-        // Append advisory suffix to soft-passed background items
-        let msg = r.message || '';
-        if (displaySeverity === 'soft') {
-            msg = '[容错放行] ' + msg;
-        }
+        // 使用中文消息生成器
+        const msg = makeMessageCN(r.checker_name, r.passed, displaySeverity,
+                                  r.actual_value, r.min_threshold, r.max_threshold,
+                                  r.message);
 
         tr.innerHTML = `
             <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-            <td>${cnName}</td>
+            <td>${cnName}${isHard && !passed ? ' <span style="color:var(--fail)">🔴</span>' : ''}</td>
             <td>${cnCat}</td>
             <td>${formatActual(r.actual_value)}</td>
             <td>${thr}</td>
