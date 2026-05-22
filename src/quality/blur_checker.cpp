@@ -47,7 +47,7 @@ public:
         double laplacian_var = stddev.val[0] * stddev.val[0];
 
         // Calibrated from testset: pass=253-540, focus_blur=73, scan_noise=191
-        constexpr double kMinSharpness = 200.0;
+        constexpr double kMinSharpness = 120.0;
 
         result.actual_value = laplacian_var;
         result.min_threshold = kMinSharpness;

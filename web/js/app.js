@@ -38,6 +38,7 @@ const CHECKER_CN = {
     chin_margin_check:        '下巴边距',
     side_margin_check:        '两侧边距',
     head_tilt_check:          '头部倾斜',
+    face_skin_tone_check:     '面部肤色',
     face_aspect_ratio_check:  '面部宽高比',
     background_color_check:   '背景颜色',
     background_uniformity_check: '背景均匀度',
@@ -104,12 +105,15 @@ function handleFile(file) {
 
 function showPreview() {
     document.getElementById('previewImage').src = currentImageDataUrl;
-    document.getElementById('imageInfo').innerHTML =
-        `<p>文件名: ${currentImage.name} | 大小: ${(currentImage.size / 1024).toFixed(1)} KB</p>`;
-    document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('previewMeta').innerHTML =
+        `<div class="tag-row">
+            <span class="tag">${currentImage.name}</span>
+            <span class="tag">${(currentImage.size / 1024).toFixed(1)} KB</span>
+        </div>`;
+    document.getElementById('previewCard').style.display = 'block';
     document.getElementById('controls').style.display = 'flex';
-    document.getElementById('resultsSection').style.display = 'none';
-    document.getElementById('beautySection').style.display = 'block';
+    document.getElementById('resultsCard').style.display = 'none';
+    document.getElementById('beautyCard').style.display = 'block';
     document.getElementById('beautyPreview').style.display = 'none';
 }
 
@@ -245,7 +249,10 @@ function generateDemoReport() {
 // 硬阻断项: 人脸/表情/姿态，只有这 6 个 checker 能返回 FAIL
 const HARD_BLOCK_CHECKS = [
     'face_detect_check', 'face_count_check', 'face_confidence_check',
-    'eye_closure_check', 'mouth_open_check', 'head_pose_check'
+    'eye_closure_check', 'mouth_open_check', 'head_pose_check',
+    'head_margin_check', 'centering_check',
+    'face_size_check', 'face_ratio_check',
+    'background_color_check', 'overexposure_check'
 ];
 
 // ========================
@@ -271,6 +278,8 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
             return passed ? `人脸置信度: ${av}` : `人脸置信度过低: ${av}（要求≥${minVal}）`;
         case 'face_size_check':
             return passed ? `人脸面积占比: ${av}` : `人脸面积占比不合适: ${av}（要求${minVal}-${maxVal}）`;
+        case 'face_skin_tone_check':
+            return passed ? `肤色正常: Cr=${av}` : rawMsg || '面部肤色异常，可能存在偏色';
         case 'face_integrity_check':
             return passed ? '人脸完整，均在画面边界内' : '人脸超出画面边界';
 
@@ -361,16 +370,12 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
 }
 
 function displayResults(report) {
-    document.getElementById('resultsSection').style.display = 'block';
+    document.getElementById('resultsCard').style.display = 'block';
 
     // ---- 两级智能判定 ----
-    // 后端已实现：硬阻断项(6个)可返回FAIL，边缘项返回WARNING
-    // overall_pass = (failed_checks == 0)
     const checks = report.results || [];
     const hardFails    = checks.filter(c => !c.passed && c.severity === 'fail'
                                    && HARD_BLOCK_CHECKS.includes(c.checker_name));
-    const hardWarnings = checks.filter(c => !c.passed && c.severity === 'fail'
-                                   && HARD_BLOCK_CHECKS.includes(c.checker_name)); // fallback
     const softAdvisory  = checks.filter(c => !c.passed && c.severity === 'warning');
     const effectivePass = report.overall_pass !== false && hardFails.length === 0;
 
@@ -391,28 +396,48 @@ function displayResults(report) {
             + `${hardFails.length} 项核心指标未达标`;
     }
 
-    // ---- 摘要统计 ----
-    document.getElementById('imageInfo').innerHTML =
-        `<p>${report.photo_display_name || report.photo_type} |
-         尺寸: ${(report.file_info || report).width || '?'}×${(report.file_info || report).height || '?'} |
-         通过: ${report.passed_checks} | 警告: ${report.warning_checks || 0} | 拒绝: ${report.failed_checks}</p>`;
-
-    // ---- 人脸信息 ----
+    // ---- 预览元信息 ----
+    const imgW = (report.file_info || report).width || report.image_width || '?';
+    const imgH = (report.file_info || report).height || report.image_height || '?';
     const fi = report.face_info;
+    let metaHtml = `<div class="tag-row">
+        <span class="tag face">${report.photo_display_name || report.photo_type}</span>
+        <span class="tag">${imgW}×${imgH}</span>
+        <span class="tag">通过: ${report.passed_checks}</span>`;
+    if (report.warning_checks) metaHtml += `<span class="tag">建议: ${report.warning_checks}</span>`;
+    if (report.failed_checks) metaHtml += `<span class="tag">拒绝: ${report.failed_checks}</span>`;
+    metaHtml += '</div>';
+
     if (fi && fi.detected) {
-        const faceStats = document.createElement('div');
-        faceStats.className = 'face-stats';
-        faceStats.innerHTML = `
-            <span title="左眼开合度">左眼EAR: ${fi.ear_left != null ? fi.ear_left.toFixed(3) : '—'}</span>
-            <span title="右眼开合度">右眼EAR: ${fi.ear_right != null ? fi.ear_right.toFixed(3) : '—'}</span>
-            <span title="张嘴程度">MAR: ${fi.mar != null ? fi.mar.toFixed(3) : '—'}</span>
-            <span title="左右转头">偏转: ${fi.yaw != null ? fi.yaw.toFixed(1) + '°' : '—'}</span>
-            <span title="上下点头">俯仰: ${fi.pitch != null ? fi.pitch.toFixed(1) + '°' : '—'}</span>
-            <span title="平面内歪头">倾斜: ${fi.roll != null ? fi.roll.toFixed(1) + '°' : '—'}</span>
-        `;
-        const infoEl = document.getElementById('imageInfo');
-        infoEl.appendChild(faceStats);
+        metaHtml += '<div class="tag-row">';
+        metaHtml += `<span class="tag" title="左眼开合度">左眼EAR: ${fi.ear_left != null ? fi.ear_left.toFixed(3) : '—'}</span>`;
+        metaHtml += `<span class="tag" title="右眼开合度">右眼EAR: ${fi.ear_right != null ? fi.ear_right.toFixed(3) : '—'}</span>`;
+        metaHtml += `<span class="tag" title="张嘴程度">MAR: ${fi.mar != null ? fi.mar.toFixed(3) : '—'}</span>`;
+        metaHtml += `<span class="tag" title="左右转头">偏转: ${fi.yaw != null ? fi.yaw.toFixed(1)+'°' : '—'}</span>`;
+        metaHtml += `<span class="tag" title="上下点头">俯仰: ${fi.pitch != null ? fi.pitch.toFixed(1)+'°' : '—'}</span>`;
+        metaHtml += `<span class="tag" title="平面内歪头">倾斜: ${fi.roll != null ? fi.roll.toFixed(1)+'°' : '—'}</span>`;
+        metaHtml += '</div>';
     }
+    document.getElementById('previewMeta').innerHTML = metaHtml;
+
+    // ---- 统计卡片 ----
+    const passCount = checks.filter(c => c.passed).length;
+    const warnCount = checks.filter(c => !c.passed && c.severity === 'warning').length;
+    const failCount = hardFails.length;
+    document.getElementById('statsRow').innerHTML = `
+        <div class="stat-card pass-stat">
+            <div class="stat-num">${passCount}</div>
+            <div class="stat-label">通过</div>
+        </div>
+        <div class="stat-card warn-stat">
+            <div class="stat-num">${warnCount}</div>
+            <div class="stat-label">建议优化</div>
+        </div>
+        <div class="stat-card fail-stat">
+            <div class="stat-num">${failCount}</div>
+            <div class="stat-label">拒绝</div>
+        </div>
+    `;
 
     // ---- 结果表格 ----
     const tbody = document.getElementById('resultsBody');
@@ -459,6 +484,47 @@ function displayResults(report) {
         `;
         tbody.appendChild(tr);
     });
+
+    // ---- 筛选栏 ----
+    const filterBar = document.getElementById('filterBar');
+    filterBar.style.display = 'flex';
+    document.getElementById('filterStat').textContent =
+        `共 ${checks.length} 项检查`;
+
+    // 重置筛选按钮状态
+    filterBar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    filterBar.querySelector('[data-filter="all"]').classList.add('active');
+
+    // 绑定筛选事件（只绑定一次）
+    if (!filterBar._bound) {
+        filterBar._bound = true;
+        filterBar.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-filter]');
+            if (!btn) return;
+
+            filterBar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const filter = btn.dataset.filter;
+            const rows = document.getElementById('resultsBody').querySelectorAll('tr');
+            let visible = 0;
+            rows.forEach(row => {
+                if (filter === 'all') {
+                    row.classList.remove('hidden-row');
+                    visible++;
+                } else {
+                    const match = filter === 'pass' ? row.classList.contains('pass-row')
+                                : filter === 'warn' ? row.classList.contains('warn-row')
+                                : row.classList.contains('fail-row');
+                    row.classList.toggle('hidden-row', !match);
+                    if (match) visible++;
+                }
+            });
+            document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+            document.getElementById('filterStat').textContent =
+                `显示 ${visible} / ${checks.length} 项`;
+        });
+    }
 }
 
 // ========================

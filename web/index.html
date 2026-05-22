@@ -13,49 +13,59 @@
     </header>
 
     <main>
-        <!-- Upload Section -->
-        <section class="upload-section">
+        <!-- Upload Card -->
+        <section class="card" id="uploadCard">
+            <div class="card-header">
+                <h2>上传照片</h2>
+            </div>
             <div class="drop-zone" id="dropZone">
-                <div class="drop-content">
-                    <span class="upload-icon">&#128247;</span>
-                    <p>拖拽照片到此处，或点击选择文件</p>
-                    <input type="file" id="fileInput" accept="image/*" hidden>
-                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                        选择照片
-                    </button>
-                </div>
+                <div class="drop-icon">&#128247;</div>
+                <p>拖拽照片到此处，或点击下方按钮选择文件</p>
+                <input type="file" id="fileInput" accept="image/*" hidden>
+                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                    选择照片
+                </button>
             </div>
-
             <div class="controls" id="controls" style="display:none;">
-                <div class="control-group">
-                    <label>照片类型：</label>
-                    <select id="photoType">
-                        <option value="id_card_cn">身份证 (358x441)</option>
-                        <option value="passport_cn">护照 (390x567)</option>
-                        <option value="drivers_license">驾驶证</option>
-                        <option value="gaokao">高考照</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <button class="btn btn-success" onclick="runQualityCheck()">运行质量检查</button>
-                </div>
+                <label>照片类型：</label>
+                <select id="photoType">
+                    <option value="id_card_cn">身份证 (358×441)</option>
+                    <option value="passport_cn">护照 (390×567)</option>
+                    <option value="drivers_license">驾驶证</option>
+                    <option value="gaokao">高考照</option>
+                </select>
+                <button class="btn btn-success" onclick="runQualityCheck()">运行质量检查</button>
             </div>
         </section>
 
-        <!-- Preview Section -->
-        <section class="preview-section" id="previewSection" style="display:none;">
-            <div class="image-preview">
-                <h3>原始照片</h3>
-                <img id="previewImage" alt="Preview">
-                <div class="image-info" id="imageInfo"></div>
+        <!-- Preview Card -->
+        <section class="card animate-in" id="previewCard" style="display:none;">
+            <div class="card-header">
+                <h2>照片预览</h2>
+            </div>
+            <div class="preview-grid">
+                <div class="preview-img-wrap">
+                    <img id="previewImage" alt="预览照片">
+                </div>
+                <div class="preview-meta" id="previewMeta"></div>
             </div>
         </section>
 
-        <!-- Quality Results -->
-        <section class="results-section" id="resultsSection" style="display:none;">
-            <h2>质量检查结果</h2>
+        <!-- Results Card -->
+        <section class="card animate-in" id="resultsCard" style="display:none;">
+            <div class="card-header">
+                <h2>质量检查结果</h2>
+            </div>
             <div class="summary-bar" id="summaryBar"></div>
-            <div class="results-table-container">
+            <div class="stats-row" id="statsRow"></div>
+            <div class="filter-bar" id="filterBar" style="display:none;">
+                <button class="btn btn-xs btn-outline active" data-filter="all">全部</button>
+                <button class="btn btn-xs btn-outline" data-filter="fail">拒绝</button>
+                <button class="btn btn-xs btn-outline" data-filter="warn">建议</button>
+                <button class="btn btn-xs btn-outline" data-filter="pass">通过</button>
+                <span class="filter-stat" id="filterStat"></span>
+            </div>
+            <div class="table-wrap">
                 <table class="results-table" id="resultsTable">
                     <thead>
                         <tr>
@@ -70,45 +80,59 @@
                     <tbody id="resultsBody"></tbody>
                 </table>
             </div>
+            <div class="empty-state" id="emptyState" style="display:none;">
+                <span class="empty-icon">&#128269;</span>
+                <p>没有匹配的结果</p>
+            </div>
         </section>
 
-        <!-- Beauty Section -->
-        <section class="beauty-section" id="beautySection" style="display:none;">
-            <h2>美颜效果</h2>
-            <div class="beauty-controls">
-                <div class="beauty-card">
-                    <h4>磨皮</h4>
-                    <label>强度：<input type="range" id="smooth_strength" min="0" max="100" value="50"></label>
-                    <label>半径：<input type="range" id="smooth_radius" min="3" max="30" value="10"></label>
-                    <button class="btn btn-sm" onclick="applyBeauty('skin_smoothing')">应用</button>
+        <!-- Beauty Card -->
+        <section class="card" id="beautyCard" style="display:none;">
+            <div class="card-header">
+                <h2>美颜效果</h2>
+            </div>
+            <div class="beauty-grid">
+                <div class="beauty-tile" id="tile_smoothing">
+                    <div class="tile-icon">&#129498;</div>
+                    <div class="tile-name">磨皮</div>
+                    <div class="tile-desc">光滑肌肤纹理</div>
+                    <input type="range" id="smooth_strength" min="0" max="100" value="50" title="强度">
+                    <input type="range" id="smooth_radius" min="3" max="30" value="10" title="半径">
+                    <button class="btn btn-sm btn-primary" onclick="applyBeauty('skin_smoothing')">应用</button>
                 </div>
-                <div class="beauty-card">
-                    <h4>美白</h4>
-                    <label>强度：<input type="range" id="whiten_strength" min="0" max="100" value="50"></label>
-                    <button class="btn btn-sm" onclick="applyBeauty('skin_whitening')">应用</button>
+                <div class="beauty-tile" id="tile_whitening">
+                    <div class="tile-icon">&#127775;</div>
+                    <div class="tile-name">美白</div>
+                    <div class="tile-desc">提亮肤色</div>
+                    <input type="range" id="whiten_strength" min="0" max="100" value="50" title="强度">
+                    <button class="btn btn-sm btn-primary" onclick="applyBeauty('skin_whitening')">应用</button>
                 </div>
-                <div class="beauty-card">
-                    <h4>大眼</h4>
-                    <label>系数：<input type="range" id="eye_factor" min="0" max="30" value="15"></label>
-                    <button class="btn btn-sm" onclick="applyBeauty('eye_enlargement')">应用</button>
+                <div class="beauty-tile" id="tile_eye">
+                    <div class="tile-icon">&#128064;</div>
+                    <div class="tile-name">大眼</div>
+                    <div class="tile-desc">放大眼部比例</div>
+                    <input type="range" id="eye_factor" min="0" max="30" value="15" title="系数">
+                    <button class="btn btn-sm btn-primary" onclick="applyBeauty('eye_enlargement')">应用</button>
                 </div>
-                <div class="beauty-card">
-                    <h4>瘦脸</h4>
-                    <label>下颌：<input type="range" id="jaw_strength" min="0" max="100" value="50"></label>
-                    <button class="btn btn-sm" onclick="applyBeauty('face_slimming')">应用</button>
+                <div class="beauty-tile" id="tile_slimming">
+                    <div class="tile-icon">&#128100;</div>
+                    <div class="tile-name">瘦脸</div>
+                    <div class="tile-desc">收紧下颌线条</div>
+                    <input type="range" id="jaw_strength" min="0" max="100" value="50" title="下颌调整">
+                    <button class="btn btn-sm btn-primary" onclick="applyBeauty('face_slimming')">应用</button>
                 </div>
             </div>
-            <div class="beauty-preview" id="beautyPreview" style="display:none;">
-                <h3>美颜效果对比</h3>
+            <div id="beautyPreview" style="display:none;">
+                <h3 style="text-align:center; margin: 1.5rem 0 0.75rem; color:var(--gray-600); font-size:0.95rem;">美颜效果对比</h3>
                 <div class="compare-container">
-                    <div><span>原始</span><img id="beforeImg"></div>
-                    <div><span>处理后</span><img id="afterImg"></div>
+                    <div><span>原始</span><img id="beforeImg" alt="原始照片"></div>
+                    <div><span>处理后</span><img id="afterImg" alt="美颜后照片"></div>
                 </div>
             </div>
         </section>
 
-        <!-- Loading -->
-        <div class="loading" id="loading" style="display:none;">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loading" style="display:none;">
             <div class="spinner"></div>
             <p>处理中...</p>
         </div>

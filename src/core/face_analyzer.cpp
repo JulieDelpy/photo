@@ -210,19 +210,23 @@ bool FaceAnalyzer::fitLandmarksLBF(const cv::Mat& image, const cv::Rect& face_ro
 }
 
 // ============================================================
-// EAR – Eye Aspect Ratio (6-point eye contour)
-//   lm[eye_start..eye_start+5]:
-//     0=left_corner, 1=top_left, 2=top, 3=top_right, 4=right_corner, 5=bottom
-//   EAR = (‖p1-p5‖ + ‖p2-p4‖) / (2·‖p0-p3‖)
+// EAR – Eye Aspect Ratio
+//   dlib 68-point eye contour: lm[es..es+5]
+//     0=outer_corner, 1=upper_outer, 2=top, 3=upper_inner,
+//     4=inner_corner, 5=bottom（唯一的下眼睑点）
+//   dlib 只有单个下眼睑点，传统 6 点 EAR 不适用。
+//   改用上眼睑三点的平均垂直距 / 眼宽：
+//   EAR = avg(‖p1-p5‖, ‖p2-p5‖, ‖p3-p5‖) / ‖p0-p4‖
 // ============================================================
 float FaceAnalyzer::computeEAR(const std::vector<cv::Point2f>& lm, int es) const
 {
     if (es + 6 > static_cast<int>(lm.size())) return 1.0f;
     float v1 = static_cast<float>(cv::norm(lm[es+1] - lm[es+5]));
-    float v2 = static_cast<float>(cv::norm(lm[es+2] - lm[es+4]));
-    float h  = static_cast<float>(cv::norm(lm[es]   - lm[es+3]));
+    float v2 = static_cast<float>(cv::norm(lm[es+2] - lm[es+5]));
+    float v3 = static_cast<float>(cv::norm(lm[es+3] - lm[es+5]));
+    float h  = static_cast<float>(cv::norm(lm[es]   - lm[es+4]));
     if (h < 1e-6f) return 1.0f;
-    return (v1 + v2) / (2.0f * h);
+    return (v1 + v2 + v3) / (3.0f * h);
 }
 
 // ============================================================
