@@ -80,7 +80,6 @@
     "image_noise_check",
     "centering_check",
     "face_ratio_check",
-    "eye_position_check",
     "head_margin_check",
     "chin_margin_check",
     "side_margin_check",

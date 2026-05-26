@@ -59,7 +59,6 @@ add_library(photo_quality OBJECT
     src/quality/head_pose_checker.cpp
     src/quality/centering_checker.cpp
     src/quality/face_ratio_checker.cpp
-    src/quality/eye_position_checker.cpp
     src/quality/head_margin_checker.cpp
     src/quality/chin_margin_checker.cpp
     src/quality/side_margin_checker.cpp

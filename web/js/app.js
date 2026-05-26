@@ -33,7 +33,6 @@ const CHECKER_CN = {
     image_noise_check:        '图像噪点',
     centering_check:          '人脸居中',
     face_ratio_check:         '面部高度比',
-    eye_position_check:       '眼睛位置',
     head_margin_check:        '头顶边距',
     chin_margin_check:        '下巴边距',
     side_margin_check:        '两侧边距',
@@ -225,7 +224,6 @@ function generateDemoReport() {
             { checker_name:'jpeg_artifact_check',      category:'quality',     passed:true, severity:'pass', actual_value:1.04,   min_threshold:0,   max_threshold:2.0,  message:'无明显JPEG伪影' },
             { checker_name:'overexposure_check',       category:'quality',     passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:0.05, message:'无显著过曝' },
             { checker_name:'underexposure_check',      category:'quality',     passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:0.05, message:'无显著欠曝' },
-            { checker_name:'eye_position_check',       category:'composition',  passed:true, severity:'pass', actual_value:0.53,   min_threshold:0.5, max_threshold:0,    message:'眼睛位置OK' },
             { checker_name:'head_margin_check',        category:'composition',  passed:true, severity:'pass', actual_value:15,     min_threshold:7,   max_threshold:21,   message:'头顶边距OK: 15px' },
             { checker_name:'chin_margin_check',        category:'composition',  passed:true, severity:'pass', actual_value:20,     min_threshold:7,   max_threshold:0,    message:'下巴边距OK: 20px' },
             { checker_name:'side_margin_check',        category:'composition',  passed:true, severity:'pass', actual_value:25,     min_threshold:10,  max_threshold:0,    message:'两侧边距OK' },
@@ -255,7 +253,7 @@ const HARD_BLOCK_CHECKS = [
     'face_size_check', 'face_ratio_check',
     'face_skin_tone_check', 'face_occlusion_check',
     'background_color_check', 'overexposure_check',
-    'eye_position_check', 'head_tilt_check'
+    'head_tilt_check'
 ];
 
 // ========================
@@ -332,8 +330,6 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
             return passed ? `人脸居中: 偏移${av}%` : `人脸未居中: 偏移${av}%（阈值${maxVal}%）`;
         case 'face_ratio_check':
             return passed ? `面部高度比: ${av}` : `面部高度比不合适: ${av}（要求${minVal}-${maxVal}）`;
-        case 'eye_position_check':
-            return passed ? `眼睛纵向位置OK: ${av}` : `眼睛位置偏上: ${av}（要求≥${minVal}）`;
         case 'head_margin_check':
             return passed ? `头顶留白OK: ${av}` : `头顶留白不合适: ${av}（要求${minVal}-${maxVal}）`;
         case 'chin_margin_check':
