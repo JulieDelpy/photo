@@ -7,7 +7,7 @@ namespace photo {
 class MouthOpenChecker : public IQualityChecker {
 public:
     const char* name() const override { return "mouth_open_check"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "1.1.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& std) override {
@@ -18,7 +18,7 @@ public:
         if (!face.detected) {
             result.passed = false;
             result.severity = Severity::FAIL;
-            result.message = "No face detected; cannot check mouth state";
+            result.message = "未检测到人脸，无法检查嘴部状态";
             return result;
         }
 
@@ -54,8 +54,6 @@ public:
                 }
             }
 
-            // Tier 1: definitely open → dark cavity OR bright teeth both fail
-            // Tier 2: borderline → only dark cavity fails (avoids false positives on thick lips)
             bool tier1 = (face.mar > kMarTier1);
             bool fail_dark = mouth_interior_dark;
             bool fail_bright = tier1 && mouth_interior_bright;
@@ -63,24 +61,24 @@ public:
             if (fail_dark) {
                 result.passed = false;
                 result.severity = Severity::FAIL;
-                result.message = "Mouth open: MAR = "
+                result.message = "张嘴: MAR = "
                                + std::to_string(face.mar).substr(0, 4)
-                               + " (oral cavity dark V=" + std::to_string(static_cast<int>(oral_v)) + ")";
+                               + " (口腔暗区 V=" + std::to_string(static_cast<int>(oral_v)) + ")";
             } else if (fail_bright) {
                 result.passed = false;
                 result.severity = Severity::FAIL;
-                result.message = "Teeth showing / exaggerated expression: MAR = "
+                result.message = "露牙/表情夸张: MAR = "
                                + std::to_string(face.mar).substr(0, 4)
-                               + " (oral cavity bright V=" + std::to_string(static_cast<int>(oral_v)) + ")";
+                               + " (口腔亮区 V=" + std::to_string(static_cast<int>(oral_v)) + ")";
             } else {
                 result.passed = true;
                 result.severity = Severity::PASS;
-                result.message = "Mouth state OK: MAR = " + std::to_string(face.mar).substr(0, 4);
+                result.message = "嘴部状态正常: MAR = " + std::to_string(face.mar).substr(0, 4);
             }
         } else {
             result.passed = true;
             result.severity = Severity::PASS;
-            result.message = "Mouth closed: MAR = " + std::to_string(face.mar).substr(0, 4);
+            result.message = "嘴部闭合: MAR = " + std::to_string(face.mar).substr(0, 4);
         }
         return result;
     }

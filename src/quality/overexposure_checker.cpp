@@ -62,8 +62,8 @@ public:
             if (area > max_spot_240) max_spot_240 = area;
         }
 
-        constexpr int kSevereSpotMax = 50;   // >250 极端亮斑，50px 即拦截
-        constexpr int kMildSpotMax   = 500;  // >240 一般高光，500px 才报警
+        constexpr int kSevereSpotMax = 50;   // >250 极端亮斑，50px 即警告
+        constexpr int kMildSpotMax   = 400;  // >240 一般高光，400px 才报警
 
         result.actual_value = ratio_250;
         result.max_threshold = kMaxOverexposedRatio;

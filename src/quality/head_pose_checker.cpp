@@ -11,7 +11,7 @@ public:
     const char* name() const override { return "head_pose_check"; }
     const char* version() const override { return "1.0.0"; }
 
-    CheckResult check(const cv::Mat&, const FaceInfo& face,
+    CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& cfg) override {
         CheckResult result;
         result.checker_name = name();
@@ -37,20 +37,36 @@ public:
         double nose_off = std::abs(face.nose_offset_ratio);
         bool yaw_ok = (yaw_abs <= max_yaw) && (nose_off <= 0.20);
 
+        // 检测下巴是否接近图像底边或被裁切，此时 pm/emr 不可靠
+        bool chin_cropped = false;
+        if (face.landmarks.size() >= 9) {
+            float chin_y = face.landmarks[8].y;
+            double chin_ratio = static_cast<double>(chin_y) / image.rows;
+            chin_cropped = (chin_ratio > 0.92);
+        }
+        // bbox 宽高比：抬头时面部被纵向压缩，w/h 偏高 (>0.78)
+        // 正常脸 w/h≈0.65-0.75，4-2(抬头)=0.794
+        double bbox_ar = face.bbox.height > 0
+            ? static_cast<double>(face.bbox.width) / face.bbox.height : 1.0;
+        bool face_squashed = (bbox_ar > 0.78);
+
         // Pitch: solvePnP pitch + 两个 2D 比例
-        //   pitch_metric = (鼻尖→下巴)/(鼻梁→鼻尖), 正常~1.5-3.0
-        //   eye_mouth_ratio = (嘴→眼)/(下巴→眼), 正常~0.50-0.74
-        //   当 pm/emr 都稳固正常时，放宽 pitch 阈值（solvePnP 偶然偏高的容错）
+        //   当下巴被裁切时 pm/emr 不可靠，直接信任 solvePnP pitch
         double pitch_abs = std::abs(face.pitch);
         double pm  = face.pitch_metric;
         double emr = face.eye_mouth_ratio;
         double eff_max_pitch = max_pitch;
-        // pm/emr 稳固正常 → 完全信任 2D 指标，solvePnP pitch 不介入
-        if (pm >= 1.55 && pm <= 2.70 && emr >= 0.52 && emr <= 0.70)
+        if (!chin_cropped && !face_squashed
+            && pm >= 1.55 && pm <= 2.70 && emr >= 0.52 && emr <= 0.70)
             eff_max_pitch = 999.0;
-        bool pitch_ok = (pitch_abs <= eff_max_pitch)
+        bool pitch_ok;
+        if (chin_cropped || face_squashed) {
+            pitch_ok = (pitch_abs <= max_pitch);
+        } else {
+            pitch_ok = (pitch_abs <= eff_max_pitch)
                      && (pm >= 1.40) && (pm <= 3.20)
                      && (emr >= 0.48) && (emr <= 0.74);
+        }
 
         double max_angle = std::max({yaw_abs, pitch_abs, tilt});
         result.actual_value = max_angle;

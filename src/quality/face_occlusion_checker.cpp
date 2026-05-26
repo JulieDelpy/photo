@@ -110,15 +110,22 @@ public:
         result.max_threshold = kDarkThreshold;
 
         // 判断逻辑：
-        // - 眉区亮 → 正常 PASS
+        // - 眉区亮 + 眼睑亮 → 正常 PASS
+        // - 眉区亮 + 眼睑暗 → 眼镜/镜框遮挡眼睛 WARNING
         // - 眉区暗 + 左右不对称 → 单侧头发遮挡 FAIL
         // - 眉区暗 + 眼睑暗 → 头发遮到眼区 FAIL
         // - 眉区暗 + 对称 + 眼睑亮 → 正常刘海 PASS
-        if (!brow_dark) {
+        if (!brow_dark && !lid_dark) {
             result.passed = true;
             result.severity = Severity::PASS;
             result.message = "面部无遮挡: 眉区亮度="
                            + std::to_string(static_cast<int>(brow_ratio * 100)) + "%";
+        } else if (!brow_dark && lid_dark) {
+            result.passed = false;
+            result.severity = Severity::WARNING;
+            result.message = "眼部区域偏暗(可能眼镜/镜框遮挡): 眉区="
+                           + std::to_string(static_cast<int>(brow_ratio * 100))
+                           + "% 眼睑=" + std::to_string(static_cast<int>(lid_ratio * 100)) + "%";
         } else if (asymmetric) {
             result.passed = false;
             result.severity = Severity::FAIL;
