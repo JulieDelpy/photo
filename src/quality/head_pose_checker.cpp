@@ -9,7 +9,7 @@ namespace photo {
 class HeadPoseChecker : public IQualityChecker {
 public:
     const char* name() const override { return "head_pose_check"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "1.2.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& cfg) override {
@@ -44,14 +44,18 @@ public:
             double chin_ratio = static_cast<double>(chin_y) / image.rows;
             chin_cropped = (chin_ratio > 0.92);
         }
-        // bbox 宽高比：抬头时面部被纵向压缩，w/h 偏高 (>0.78)
-        // 正常脸 w/h≈0.65-0.75，4-2(抬头)=0.794
+        // bbox 宽高比：抬头时面部被纵向压缩，w/h 偏高
         double bbox_ar = face.bbox.height > 0
             ? static_cast<double>(face.bbox.width) / face.bbox.height : 1.0;
-        bool face_squashed = (bbox_ar > 0.78);
+        // 鼻子压缩比：抬头时鼻梁→鼻尖在 2D 上被透视缩短
+        double nose_ratio = 0;
+        if (face.landmarks.size() >= 31 && face.bbox.height > 0) {
+            double nose_len = cv::norm(face.landmarks[30] - face.landmarks[27]);
+            nose_ratio = nose_len / face.bbox.height;
+        }
+        bool face_squashed = (bbox_ar > 0.78 && nose_ratio < 0.20);
 
-        // Pitch: solvePnP pitch + 两个 2D 比例
-        //   当下巴被裁切时 pm/emr 不可靠，直接信任 solvePnP pitch
+        // Pitch: solvePnP pitch + 2D 比例
         double pitch_abs = std::abs(face.pitch);
         double pm  = face.pitch_metric;
         double emr = face.eye_mouth_ratio;
