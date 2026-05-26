@@ -1,6 +1,8 @@
 #include "photo/plugin/iquality_checker.hpp"
 #include "photo/plugin/plugin_macros.hpp"
 #include <opencv2/imgproc.hpp>
+#include <sstream>
+#include <iomanip>
 
 namespace photo {
 
@@ -81,51 +83,61 @@ public:
         double bgr_g_mean = bgr_g_sum / valid_regions;
         double bgr_r_mean = bgr_r_sum / valid_regions;
 
-        // HSV 背景色阈值
-        constexpr double kBgExpectedSMax = 85.0;
-        constexpr double kBgExpectedVMin = 150.0;
+        // HSV 背景色阈值（来自配置）
+        int s_max = std.bg_expected_s_max > 0 ? std.bg_expected_s_max : 85;
+        int v_min = std.bg_expected_v_min > 0 ? std.bg_expected_v_min : 150;
 
-        result.actual_value = s_mean;
-        result.max_threshold = kBgExpectedSMax;
+        bool s_ok = (s_mean <= s_max);
+        bool v_ok = (v_mean >= v_min);
 
-        bool s_ok = (s_mean <= kBgExpectedSMax);
-        bool v_ok = (v_mean >= kBgExpectedVMin);
-
-        // LAB 偏色检测：仅对低饱和度背景（白/灰底）做中性灰检查
-        // 高饱和度背景（蓝底、红底等）不检查 LAB 中性，仅检查 S/V 范围
+        // LAB 偏色检测：分级阈值
+        // 低饱和度（白/灰底）→ 严格；中饱和度 → 中等；高饱和度（蓝/红底）→ 宽松
         double a_dev = a_mean - 128.0;
         double b_dev = b_lab_mean - 128.0;
         double color_cast_dist = std::sqrt(a_dev * a_dev + b_dev * b_dev);
-        constexpr double kMaxColorCastDist = 10.0;   // LAB 中性偏离距离 > 10 = 偏色
-        constexpr double kColorBgSMin = 60.0;         // S > 60 视为有彩色背景，跳过偏色检测
 
-        // RGB 白平衡作为辅助参考
-        double rgb_max = std::max({bgr_r_mean, bgr_g_mean, bgr_b_mean});
-        double rgb_min = std::min({bgr_r_mean, bgr_g_mean, bgr_b_mean});
-        double rgb_spread = (rgb_max > 0) ? (rgb_max - rgb_min) / rgb_max : 0;
+        double max_cc_dist;
+        if (s_mean <= 30)       max_cc_dist = 8.0;   // 纯白/灰底，允许轻微自然偏差
+        else if (s_mean <= 60)  max_cc_dist = 13.0;  // 浅色底，允许正常灯光暖色调
+        else                    max_cc_dist = 15.0;  // 彩色底（蓝/红），只抓极端偏色
 
-        // S > kColorBgSMin 说明是有意为之的彩色背景（如蓝底），不检查偏色
-        bool cc_ok = (s_mean > kColorBgSMin) || (color_cast_dist <= kMaxColorCastDist);
+        bool cc_ok = (color_cast_dist <= max_cc_dist);
+
+        // 将偏色距和阈值暴露给前端（保留一位小数避免取整误差）
+        auto fmt1 = [](double v) {
+            std::ostringstream ss;
+            ss << std::fixed << std::setprecision(1) << v;
+            return ss.str();
+        };
+        result.actual_value = color_cast_dist;
+        result.max_threshold = max_cc_dist;
 
         if (s_ok && v_ok && cc_ok) {
             result.passed = true;
             result.severity = Severity::PASS;
             result.message = "背景颜色正常: S=" + std::to_string(static_cast<int>(s_mean))
                            + " V=" + std::to_string(static_cast<int>(v_mean))
-                           + " 偏色距=" + std::to_string(static_cast<int>(color_cast_dist));
+                           + " 偏色距=" + fmt1(color_cast_dist);
         } else if (!cc_ok) {
             result.passed = false;
             result.severity = Severity::FAIL;
             result.message = "背景存在偏色: S=" + std::to_string(static_cast<int>(s_mean))
                            + " LAB A=" + std::to_string(static_cast<int>(a_mean))
                            + " B=" + std::to_string(static_cast<int>(b_lab_mean))
-                           + " 偏色距=" + std::to_string(static_cast<int>(color_cast_dist))
-                           + " RGB偏差=" + std::to_string(static_cast<int>(rgb_spread * 100)) + "%";
+                           + " 偏色距=" + fmt1(color_cast_dist)
+                           + " (阈值≤" + fmt1(max_cc_dist) + ")";
+        } else if (!s_ok) {
+            result.passed = false;
+            result.severity = Severity::WARNING;
+            result.message = "背景饱和度过高: S=" + std::to_string(static_cast<int>(s_mean))
+                           + " (阈值≤" + std::to_string(s_max) + ")"
+                           + " V=" + std::to_string(static_cast<int>(v_mean));
         } else {
             result.passed = false;
             result.severity = Severity::WARNING;
-            result.message = "背景颜色不符合要求: S=" + std::to_string(static_cast<int>(s_mean))
-                           + " V=" + std::to_string(static_cast<int>(v_mean));
+            result.message = "背景亮度过低: V=" + std::to_string(static_cast<int>(v_mean))
+                           + " (阈值≥" + std::to_string(v_min) + ")"
+                           + " S=" + std::to_string(static_cast<int>(s_mean));
         }
         return result;
     }

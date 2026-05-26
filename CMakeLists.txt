@@ -53,6 +53,7 @@ add_library(photo_quality OBJECT
     src/quality/face_size_checker.cpp
     src/quality/face_integrity_checker.cpp
     src/quality/face_skin_tone_checker.cpp
+    src/quality/face_occlusion_checker.cpp
     src/quality/eye_closure_checker.cpp
     src/quality/mouth_open_checker.cpp
     src/quality/head_pose_checker.cpp

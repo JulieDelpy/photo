@@ -59,6 +59,8 @@
     "face_confidence_check",
     "face_size_check",
     "face_integrity_check",
+    "face_skin_tone_check",
+    "face_occlusion_check",
     "eye_closure_check",
     "mouth_open_check",
     "head_pose_check",

@@ -58,12 +58,17 @@ public:
         double cr_sd = cr_std.val[0];
         double cb_sd = cb_std.val[0];
 
-        // 亚洲肤色在 YCrCb 空间的正常范围（经验值）
+        // 亚洲肤色在 YCrCb 空间的正常范围
+        // Cb 下限从 pass 照片统计得出：min=107，留余量设 105
         constexpr double kCrMin = 135.0, kCrMax = 165.0;
-        constexpr double kCbMin = 100.0, kCbMax = 130.0;
+        constexpr double kCbMin = 105.0, kCbMax = 130.0;
+        // Cr/Cb 比值过高说明偏红/偏暖（pass 照片 1.22-1.42）
+        constexpr double kCrCbRatioMax = 1.45;
         // Cr/Cb 标准差过高说明色彩不均匀
         constexpr double kCrSdMax = 25.0;
         constexpr double kCbSdMax = 20.0;
+
+        double cr_cb_ratio = (cb > 0) ? cr / cb : 0;
 
         result.actual_value = cr;
         result.min_threshold = kCrMin;
@@ -71,24 +76,30 @@ public:
 
         bool cr_ok = (cr >= kCrMin && cr <= kCrMax);
         bool cb_ok = (cb >= kCbMin && cb <= kCbMax);
+        bool ratio_ok = (cr_cb_ratio <= kCrCbRatioMax);
         bool cr_sd_ok = (cr_sd <= kCrSdMax);
         bool cb_sd_ok = (cb_sd <= kCbSdMax);
 
-        if (cr_ok && cb_ok && cr_sd_ok && cb_sd_ok) {
+        if (cr_ok && cb_ok && ratio_ok && cr_sd_ok && cb_sd_ok) {
             result.passed = true;
             result.severity = Severity::PASS;
             result.message = "肤色正常: Cr=" + std::to_string(static_cast<int>(cr))
                            + " Cb=" + std::to_string(static_cast<int>(cb));
         } else {
             result.passed = false;
-            result.severity = Severity::WARNING;
+            result.severity = Severity::FAIL;
             std::string msg = "面部肤色异常";
-            if (!cr_ok) msg += ": Cr=" + std::to_string(static_cast<int>(cr))
-                             + " (正常" + std::to_string(static_cast<int>(kCrMin))
-                             + "-" + std::to_string(static_cast<int>(kCrMax)) + ")";
-            else if (!cb_ok) msg += ": Cb=" + std::to_string(static_cast<int>(cb))
-                             + " (正常" + std::to_string(static_cast<int>(kCbMin))
-                             + "-" + std::to_string(static_cast<int>(kCbMax)) + ")";
+            if (!ratio_ok)
+                msg += ": 偏暖/偏红 Cr/Cb=" + std::to_string(static_cast<int>(cr_cb_ratio * 100))
+                    + "% (阈值≤" + std::to_string(static_cast<int>(kCrCbRatioMax * 100)) + "%)";
+            else if (!cb_ok)
+                msg += ": Cb=" + std::to_string(static_cast<int>(cb))
+                    + " (正常" + std::to_string(static_cast<int>(kCbMin))
+                    + "-" + std::to_string(static_cast<int>(kCbMax)) + ")";
+            else if (!cr_ok)
+                msg += ": Cr=" + std::to_string(static_cast<int>(cr))
+                    + " (正常" + std::to_string(static_cast<int>(kCrMin))
+                    + "-" + std::to_string(static_cast<int>(kCrMax)) + ")";
             else msg += ": 色彩不均 CrSD=" + std::to_string(static_cast<int>(cr_sd))
                       + " CbSD=" + std::to_string(static_cast<int>(cb_sd));
             result.message = msg;

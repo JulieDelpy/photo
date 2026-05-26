@@ -39,6 +39,7 @@ const CHECKER_CN = {
     side_margin_check:        '两侧边距',
     head_tilt_check:          '头部倾斜',
     face_skin_tone_check:     '面部肤色',
+    face_occlusion_check:     '面部遮挡',
     face_aspect_ratio_check:  '面部宽高比',
     background_color_check:   '背景颜色',
     background_uniformity_check: '背景均匀度',
@@ -252,6 +253,7 @@ const HARD_BLOCK_CHECKS = [
     'eye_closure_check', 'mouth_open_check', 'head_pose_check',
     'head_margin_check', 'centering_check',
     'face_size_check', 'face_ratio_check',
+    'face_skin_tone_check', 'face_occlusion_check',
     'background_color_check', 'overexposure_check'
 ];
 
@@ -280,6 +282,8 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
             return passed ? `人脸面积占比: ${av}` : `人脸面积占比不合适: ${av}（要求${minVal}-${maxVal}）`;
         case 'face_skin_tone_check':
             return passed ? `肤色正常: Cr=${av}` : rawMsg || '面部肤色异常，可能存在偏色';
+        case 'face_occlusion_check':
+            return passed ? '面部无遮挡' : rawMsg || '面部存在遮挡（头发遮眉/眼）';
         case 'face_integrity_check':
             return passed ? '人脸完整，均在画面边界内' : '人脸超出画面边界';
 
