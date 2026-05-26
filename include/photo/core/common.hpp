@@ -37,10 +37,18 @@ struct FaceInfo {
     // 68 facial landmarks (or empty if detector doesn't provide them)
     std::vector<cv::Point2f> landmarks;
 
-    // Head pose angles (degrees)
+    // Head pose angles (degrees) — from solvePnP
     float yaw = 0.0f;
     float pitch = 0.0f;
     float roll = 0.0f;
+
+    // Direct landmark-based measurements (more reliable than solvePnP roll/pitch)
+    float eye_tilt = 0.0f;         // 两眼连线与水平线夹角(度)，正值=左眼高(逆时针)
+    float nose_offset_ratio = 0.0f; // 鼻尖相对两眼中心的水平偏移比（用于判断偏头）
+    float eye_rel_y = 0.0f;        // 眼睛在 face bbox 中的相对Y位置
+    float chin_eye_ratio = 0.0f;   // (下巴Y-眼睛Y)/bbox.height
+    float pitch_metric = 0.0f;     // (鼻尖→下巴)/(鼻梁→鼻尖), 抬头>3.0, 低头<1.5
+    float eye_mouth_ratio = 0.0f;  // (嘴→眼)/(下巴→眼), 抬头<0.52, 低头>0.72
 
     // Eye Aspect Ratio
     float ear_left = 1.0f;

@@ -85,6 +85,7 @@ FaceInfo FaceAnalyzer::detect(const cv::Mat& image)
                 info.ear_right = computeEAR(info.landmarks, 42);
                 info.mar       = computeMAR(info.landmarks);
                 estimateHeadPose(info, image.cols, image.rows);
+                computeDirectMetrics(info);
             } else {
                 generateSyntheticLandmarks(info);
             }
@@ -101,6 +102,7 @@ FaceInfo FaceAnalyzer::detect(const cv::Mat& image)
             info.ear_right = computeEAR(info.landmarks, 42);
             info.mar       = computeMAR(info.landmarks);
             estimateHeadPose(info, image.cols, image.rows);
+            computeDirectMetrics(info);
         } else {
             generateSyntheticLandmarks(info);
         }
@@ -286,6 +288,54 @@ void FaceAnalyzer::estimateHeadPose(FaceInfo& info, int img_width, int img_heigh
 }
 
 // ============================================================
+// Direct landmark-based head pose metrics
+// ============================================================
+void FaceAnalyzer::computeDirectMetrics(FaceInfo& info)
+{
+    if (info.landmarks.size() < 68) return;
+
+    // 1) Eye-line tilt (in-plane rotation, replaces solvePnP roll)
+    //    Positive = left eye higher in image (head tilted right from viewer)
+    float dx = info.landmarks[45].x - info.landmarks[36].x;
+    float dy = info.landmarks[45].y - info.landmarks[36].y;
+    info.eye_tilt = std::atan2(dy, dx) * 180.0f / static_cast<float>(CV_PI);
+
+    // 2) Nose horizontal offset ratio (yaw proxy)
+    float eye_cx = (info.landmarks[36].x + info.landmarks[45].x) * 0.5f;
+    float eye_dist = std::abs(dx);
+    if (eye_dist > 1.0f)
+        info.nose_offset_ratio = (info.landmarks[30].x - eye_cx) / eye_dist;
+    else
+        info.nose_offset_ratio = 0.0f;
+
+    // 3) Pitch metric: (nose→chin) / (nose_bridge→nose_tip)
+    //    抬头 → chin远+鼻梁短 → 比值变大；低头 → chin近+鼻梁长 → 比值变小
+    float nose_to_chin = cv::norm(info.landmarks[8] - info.landmarks[30]);
+    float bridge_len   = cv::norm(info.landmarks[30] - info.landmarks[27]);
+    if (bridge_len > 1.0f && nose_to_chin > 1.0f)
+        info.pitch_metric = nose_to_chin / bridge_len;
+    else
+        info.pitch_metric = 2.2f;
+
+    // 4) Eye & chin relative position in face bbox (备用)
+    float eye_cy = (info.landmarks[36].y + info.landmarks[45].y) * 0.5f;
+    float mouth_cy = (info.landmarks[48].y + info.landmarks[54].y) * 0.5f;
+    float chin_y2 = info.landmarks[8].y;
+    float eye_to_chin = chin_y2 - eye_cy;
+    if (eye_to_chin > 1.0f)
+        info.eye_mouth_ratio = (mouth_cy - eye_cy) / eye_to_chin;
+    else
+        info.eye_mouth_ratio = 0.62f;
+    if (info.bbox.height > 0) {
+        info.eye_rel_y = (eye_cy - info.bbox.y) / info.bbox.height;
+        info.chin_eye_ratio = eye_to_chin / info.bbox.height;
+    } else {
+        info.eye_rel_y = 0.35f;
+        info.chin_eye_ratio = 0.58f;
+    }
+}
+
+// ============================================================
 // Synthetic landmarks (fallback — bbox proportional)
 // ============================================================
 void FaceAnalyzer::generateSyntheticLandmarks(FaceInfo& info)
@@ -328,6 +378,7 @@ void FaceAnalyzer::generateSyntheticLandmarks(FaceInfo& info)
     info.ear_right = computeEAR(info.landmarks, 42);
     info.mar       = computeMAR(info.landmarks);
     info.yaw = info.pitch = info.roll = 0.0f;
+    computeDirectMetrics(info);
 }
 
 } // namespace photo
