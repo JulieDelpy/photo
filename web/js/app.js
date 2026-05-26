@@ -254,7 +254,8 @@ const HARD_BLOCK_CHECKS = [
     'head_margin_check', 'centering_check',
     'face_size_check', 'face_ratio_check',
     'face_skin_tone_check', 'face_occlusion_check',
-    'background_color_check', 'overexposure_check'
+    'background_color_check', 'overexposure_check',
+    'eye_position_check', 'head_tilt_check'
 ];
 
 // ========================
@@ -332,7 +333,7 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
         case 'face_ratio_check':
             return passed ? `面部高度比: ${av}` : `面部高度比不合适: ${av}（要求${minVal}-${maxVal}）`;
         case 'eye_position_check':
-            return passed ? `眼睛纵向位置OK: ${av}` : `眼睛纵向位置偏下: ${av}（要求≥${minVal}）`;
+            return passed ? `眼睛纵向位置OK: ${av}` : `眼睛位置偏上: ${av}（要求≥${minVal}）`;
         case 'head_margin_check':
             return passed ? `头顶留白OK: ${av}` : `头顶留白不合适: ${av}（要求${minVal}-${maxVal}）`;
         case 'chin_margin_check':

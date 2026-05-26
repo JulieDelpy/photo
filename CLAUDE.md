@@ -72,15 +72,16 @@ REGISTER_PLUGIN(IQualityChecker, BlurChecker, "blur_check")
 | `WARNING` | 边缘建议（黄灯）| 不计入 failed_checks |
 | `FAIL` | 硬阻断（红灯）| `overall_pass = (failed_checks == 0)` |
 
-只有 14 个核心 checker 可以使用 `FAIL`：
+只有 16 个核心 checker 可以使用 `FAIL`：
 - `face_detect_check` / `face_count_check` / `face_confidence_check`
 - `eye_closure_check` / `mouth_open_check` / `head_pose_check`
 - `head_margin_check` / `centering_check`
 - `face_size_check` / `face_ratio_check`
 - `face_skin_tone_check` / `face_occlusion_check`
 - `background_color_check` / `overexposure_check`
+- `eye_position_check` / `head_tilt_check`
 
-其余 28 个 checker 全部使用 `WARNING`（总数 42）。
+其余 26 个 checker 全部使用 `WARNING`（总数 42）。
 
 ### 人脸检测管线
 
