@@ -16,8 +16,8 @@ public:
 
         if (!face.detected || face.landmarks.size() < 68) {
             result.passed = false;
-            result.severity = Severity::WARNING;
-            result.message = "No landmarks available; cannot check eye position";
+            result.severity = Severity::FAIL;
+            result.message = "无特征点，无法检查眼睛位置";
             return result;
         }
 
@@ -37,13 +37,13 @@ public:
 
         if (eye_ratio < std.eye_position_ratio_min) {
             result.passed = false;
-            result.severity = Severity::WARNING;
-            result.message = "Eyes too high in frame: eye position ratio = "
+            result.severity = Severity::FAIL;
+            result.message = "眼睛位置偏上: ratio = "
                            + std::to_string(eye_ratio).substr(0, 4);
         } else {
             result.passed = true;
             result.severity = Severity::PASS;
-            result.message = "Eye position OK: ratio = "
+            result.message = "眼睛位置正常: ratio = "
                            + std::to_string(eye_ratio).substr(0, 4);
         }
         return result;

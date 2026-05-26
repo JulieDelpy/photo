@@ -108,7 +108,10 @@ void runCheck(const std::string& image_path, const photo::IDPhotoStandard& stand
         auto result = checker->check(img.mat(), face, standard);
         report.results.push_back(result);
 
-        std::string status = result.passed ? "[PASS]" : "[FAIL]";
+        std::string status;
+        if (result.passed) status = "[PASS]";
+        else if (result.severity == photo::Severity::WARNING) status = "[WARN]";
+        else status = "[FAIL]";
         std::cout << status << " " << result.checker_name << ": "
                   << result.message << std::endl;
 
