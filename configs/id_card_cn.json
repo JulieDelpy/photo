@@ -21,7 +21,7 @@
     "mar_max": 0.25,
     "max_head_yaw": 10.0,
     "max_head_pitch": 9.0,
-    "max_head_roll": 10.0
+    "max_head_roll": 7.5
   },
   "quality": {
     "min_sharpness": 200.0,

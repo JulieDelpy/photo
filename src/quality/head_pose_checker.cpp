@@ -40,10 +40,15 @@ public:
         // Pitch: solvePnP pitch + 两个 2D 比例
         //   pitch_metric = (鼻尖→下巴)/(鼻梁→鼻尖), 正常~1.5-3.0
         //   eye_mouth_ratio = (嘴→眼)/(下巴→眼), 正常~0.50-0.74
+        //   当 pm/emr 都稳固正常时，放宽 pitch 阈值（solvePnP 偶然偏高的容错）
         double pitch_abs = std::abs(face.pitch);
         double pm  = face.pitch_metric;
         double emr = face.eye_mouth_ratio;
-        bool pitch_ok = (pitch_abs <= max_pitch)
+        double eff_max_pitch = max_pitch;
+        // pm/emr 稳固正常 → 完全信任 2D 指标，solvePnP pitch 不介入
+        if (pm >= 1.55 && pm <= 2.70 && emr >= 0.52 && emr <= 0.70)
+            eff_max_pitch = 999.0;
+        bool pitch_ok = (pitch_abs <= eff_max_pitch)
                      && (pm >= 1.40) && (pm <= 3.20)
                      && (emr >= 0.48) && (emr <= 0.74);
 
