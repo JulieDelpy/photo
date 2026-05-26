@@ -64,11 +64,11 @@ public:
         bool tier2 = (face.mar > kMarTier2);
 
         // 张嘴 → 暗腔/亮牙 都拦截
-        // 半张嘴(tier2) → 仅暗腔拦截（Tier1 亮牙才拦，避免厚唇误报）
-        // 闭嘴(tier2以下) → 仅"亮+低饱和=牙齿"拦截（S通道区分牙齿和唇色）
+        // 半张嘴(tier2) → 暗腔拦截
+        // is_teeth 条件严格(V>160+S<100)，任意 MAR 均生效，避免厚唇误报
         bool fail_dark   = tier2 && mouth_dark;
         bool fail_bright = (tier1 && mouth_bright)          // 张嘴+亮区
-                        || (!tier2 && is_teeth);            // 闭嘴但有牙齿特征
+                        || is_teeth;                         // 任意MAR+牙齿特征
 
         if (fail_dark) {
             result.passed = false;
