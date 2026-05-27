@@ -66,7 +66,11 @@ const CATEGORY_CN = {
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 
-dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('click', (e) => {
+    // 不拦截按钮自身的点击（否则会触发两次文件选择器）
+    if (e.target.closest('button')) return;
+    fileInput.click();
+});
 
 dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -595,6 +599,78 @@ async function applyBeautyViaAPI(effectName) {
     if (!resp.ok) throw new Error(`API ${resp.status}`);
     const blob = await resp.blob();
     return URL.createObjectURL(blob);
+}
+
+// 应用全部四个美颜效果（按磨皮→美白→大眼→瘦脸顺序叠加）
+function applyAllBeauty() {
+    if (!currentImage) {
+        alert('请先选择照片');
+        return;
+    }
+
+    showLoading(true);
+
+    const effects = [
+        {
+            name: 'skin_smoothing',
+            params: {
+                strength: (parseInt(document.getElementById('smooth_strength')?.value) || 30) / 100,
+                texture:  (parseInt(document.getElementById('smooth_texture')?.value)  || 60) / 100
+            }
+        },
+        {
+            name: 'skin_whitening',
+            params: {
+                strength: (parseInt(document.getElementById('whiten_strength')?.value) || 30) / 100,
+                warmth:   (parseInt(document.getElementById('whiten_warmth')?.value)   || 40) / 100
+            }
+        },
+        {
+            name: 'eye_enlargement',
+            params: {
+                factor: (parseInt(document.getElementById('eye_factor')?.value) || 10) / 100
+            }
+        },
+        {
+            name: 'face_slimming',
+            params: {
+                jaw_strength:   (parseInt(document.getElementById('jaw_strength')?.value)   || 35) / 100,
+                cheek_strength: (parseInt(document.getElementById('cheek_strength')?.value) || 20) / 100
+            }
+        }
+    ];
+
+    const formData = new FormData();
+    formData.append('image', currentImage);
+    formData.append('effects', JSON.stringify(effects));
+
+    fetch(`${apiBase}/api/v1/beautify`, {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(60000)
+    })
+    .then(resp => {
+        if (!resp.ok) throw new Error(`API ${resp.status}`);
+        return resp.blob();
+    })
+    .then(blob => {
+        const resultUrl = URL.createObjectURL(blob);
+        document.getElementById('beautyPreview').style.display = 'block';
+        document.getElementById('beforeImg').src = currentImageDataUrl;
+        document.getElementById('afterImg').src = resultUrl;
+        document.getElementById('afterImg').style.filter = '';
+        showLoading(false);
+    })
+    .catch(err => {
+        console.warn('Beauty API unavailable:', err.message);
+        document.getElementById('beautyPreview').style.display = 'block';
+        document.getElementById('beforeImg').src = currentImageDataUrl;
+        const img = document.getElementById('afterImg');
+        img.src = currentImageDataUrl;
+        img.style.filter = 'blur(0.5px) brightness(1.1) contrast(1.05)';
+        img.title = '预览（CSS模拟）—— 启动 photo_web_server 后可获得真实美颜效果';
+        showLoading(false);
+    });
 }
 
 // ========================

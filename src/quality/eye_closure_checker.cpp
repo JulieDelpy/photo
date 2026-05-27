@@ -9,7 +9,7 @@ namespace photo {
 class EyeClosureChecker : public IQualityChecker {
 public:
     const char* name() const override { return "eye_closure_check"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "1.1.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& std) override {
@@ -40,19 +40,25 @@ public:
         result.detail = "EAR=" + std::to_string(ear).substr(0, 5);
 
         // 两级判定：纹理方差为主（像素级），EAR 为辅（几何级）
+        // 只有两者同时低才判 FAIL（双眼信号一致），仅纹理低为 WARNING（避免小眼/眼镜/大图误报）
         bool earLow     = (ear < kEarMin);
         bool textureLow = (eye_texture_var < kTextureVarMin);
 
-        if (textureLow) {
-            // 眼区纹理极低 → 闭眼（虹膜/巩膜边界消失）
+        if (textureLow && earLow) {
             result.passed = false;
             result.severity = Severity::FAIL;
             result.message = "疑似闭眼: 眼区纹理方差="
                            + std::to_string(static_cast<int>(eye_texture_var))
                            + " (阈值" + std::to_string(static_cast<int>(kTextureVarMin)) + ")"
                            + ", EAR=" + std::to_string(ear).substr(0, 4);
+        } else if (textureLow && !earLow) {
+            result.passed = false;
+            result.severity = Severity::WARNING;
+            result.message = "眼区纹理偏弱: 方差="
+                           + std::to_string(static_cast<int>(eye_texture_var))
+                           + " (阈值" + std::to_string(static_cast<int>(kTextureVarMin)) + ")"
+                           + ", EAR=" + std::to_string(ear).substr(0, 4) + "(正常)";
         } else if (earLow && !textureLow) {
-            // EAR 低但纹理正常 → 可能是天生小眼或 LBF 误差
             result.passed = false;
             result.severity = Severity::WARNING;
             result.message = "眼裂偏窄: EAR=" + std::to_string(ear).substr(0, 4)

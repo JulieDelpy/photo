@@ -7,7 +7,7 @@ namespace photo {
 class MouthOpenChecker : public IQualityChecker {
 public:
     const char* name() const override { return "mouth_open_check"; }
-    const char* version() const override { return "1.2.0"; }
+    const char* version() const override { return "1.3.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& std) override {
@@ -24,7 +24,7 @@ public:
 
         constexpr double kMarTier1 = 0.25;
         constexpr double kMarTier2 = 0.18;
-        constexpr double kMarLow   = 0.05;   // 极低 MAR 也检测（闭嘴露牙）
+        constexpr double kMarLow   = 0.13;   // 低于此 MAR 不检测内口腔（闭嘴状态 landmarks 不准）
         constexpr int    kInnerMouthVDark  = 80;
         constexpr int    kInnerMouthVBright = 160;
         constexpr int    kTeethLowS = 100;   // 牙齿饱和度低（偏白）
@@ -66,11 +66,11 @@ public:
 
         // 张嘴 → 暗腔/亮牙 都拦截
         // 半张嘴(tier2) → 暗腔拦截 或 强牙齿信号(V>180+S<70)
-        // 闭嘴(!tier2) → 标准牙齿信号(V>160+S<100)
+        // 闭嘴(!tier2) → 仅最强牙齿信号(V>180+S<70)，防止嘴唇反光误报
         bool fail_dark   = tier2 && mouth_dark;
         bool fail_bright = (tier1 && mouth_bright)          // 张嘴+亮区
                         || (tier2 && is_teeth_hard)         // 半张嘴+强牙齿信号
-                        || (!tier2 && is_teeth);            // 闭嘴+牙齿信号
+                        || (!tier2 && is_teeth_hard);       // 闭嘴仅保留最强牙齿信号
 
         if (fail_dark) {
             result.passed = false;
