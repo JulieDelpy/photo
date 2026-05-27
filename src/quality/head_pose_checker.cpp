@@ -26,7 +26,7 @@ public:
 
         double max_yaw   = cfg.max_head_yaw > 0 ? cfg.max_head_yaw : 10.0;
         double max_pitch = cfg.max_head_pitch > 0 ? cfg.max_head_pitch : 9.0;
-        double max_roll  = cfg.max_head_roll > 0 ? cfg.max_head_roll : 10.0;
+        double max_roll  = cfg.max_head_roll > 0 ? cfg.max_head_roll : 7.5;
 
         // Roll: eye_tilt（两眼连线角度），比 solvePnP roll 可靠
         double tilt = std::abs(face.eye_tilt);

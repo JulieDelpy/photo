@@ -58,11 +58,9 @@ add_library(photo_quality OBJECT
     src/quality/mouth_open_checker.cpp
     src/quality/head_pose_checker.cpp
     src/quality/centering_checker.cpp
-    src/quality/face_ratio_checker.cpp
     src/quality/head_margin_checker.cpp
     src/quality/chin_margin_checker.cpp
     src/quality/side_margin_checker.cpp
-    src/quality/head_tilt_checker.cpp
     src/quality/face_aspect_ratio_checker.cpp
     src/quality/background_color_checker.cpp
     src/quality/background_uniformity_checker.cpp

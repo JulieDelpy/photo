@@ -59,16 +59,18 @@ public:
 
         bool mouth_dark   = (oral_v < kInnerMouthVDark);
         bool mouth_bright = (oral_v > kInnerMouthVBright);
-        bool is_teeth = mouth_bright && (oral_s < kTeethLowS);  // 亮+低饱和=牙齿
+        bool is_teeth     = mouth_bright && (oral_s < kTeethLowS);  // 亮+低饱和=牙齿
+        bool is_teeth_hard = mouth_bright && (oral_s < 70) && (oral_v > 180);  // 半张嘴区间更严格
         bool tier1 = (face.mar > kMarTier1);
         bool tier2 = (face.mar > kMarTier2);
 
         // 张嘴 → 暗腔/亮牙 都拦截
-        // 半张嘴(tier2) → 暗腔拦截
-        // is_teeth 条件严格(V>160+S<100)，任意 MAR 均生效，避免厚唇误报
+        // 半张嘴(tier2) → 暗腔拦截 或 强牙齿信号(V>180+S<70)
+        // 闭嘴(!tier2) → 标准牙齿信号(V>160+S<100)
         bool fail_dark   = tier2 && mouth_dark;
         bool fail_bright = (tier1 && mouth_bright)          // 张嘴+亮区
-                        || is_teeth;                         // 任意MAR+牙齿特征
+                        || (tier2 && is_teeth_hard)         // 半张嘴+强牙齿信号
+                        || (!tier2 && is_teeth);            // 闭嘴+牙齿信号
 
         if (fail_dark) {
             result.passed = false;

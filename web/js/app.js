@@ -12,7 +12,7 @@ const CHECKER_CN = {
     face_detect_check:        '人脸检测',
     face_count_check:         '人脸数量',
     face_confidence_check:    '人脸置信度',
-    face_size_check:          '人脸尺寸占比',
+    face_size_check:          '人脸尺寸',
     face_integrity_check:     '人脸完整性',
     eye_closure_check:        '眼睛闭合检测',
     mouth_open_check:         '张嘴检测',
@@ -32,11 +32,9 @@ const CHECKER_CN = {
     image_contrast_check:     '图像对比度',
     image_noise_check:        '图像噪点',
     centering_check:          '人脸居中',
-    face_ratio_check:         '面部高度比',
     head_margin_check:        '头顶边距',
     chin_margin_check:        '下巴边距',
     side_margin_check:        '两侧边距',
-    head_tilt_check:          '头部倾斜',
     face_skin_tone_check:     '面部肤色',
     face_occlusion_check:     '面部遮挡',
     face_aspect_ratio_check:  '面部宽高比',
@@ -189,8 +187,8 @@ function generateDemoReport() {
         photo_type: 'id_card_cn',
         photo_display_name: '第二代居民身份证照片 (GA标准) — 演示数据',
         overall_pass: true,
-        total_checks: 40,
-        passed_checks: 40,
+        total_checks: 39,
+        passed_checks: 39,
         failed_checks: 0,
         warning_checks: 0,
         face_info: {
@@ -202,14 +200,12 @@ function generateDemoReport() {
             { checker_name:'face_detect_check',        category:'face',        passed:true, severity:'pass', actual_value:1,      min_threshold:0,   max_threshold:0,    message:'检测到人脸' },
             { checker_name:'face_count_check',         category:'face',        passed:true, severity:'pass', actual_value:1,      min_threshold:1,   max_threshold:1,    message:'人脸数量: 1' },
             { checker_name:'face_confidence_check',    category:'face',        passed:true, severity:'pass', actual_value:0.94,   min_threshold:0.8, max_threshold:0,    message:'置信度: 0.94' },
-            { checker_name:'face_size_check',          category:'face',        passed:true, severity:'pass', actual_value:0.30,   min_threshold:0.25,max_threshold:0.45, message:'人脸面积占比: 30%' },
+            { checker_name:'face_size_check',          category:'face',        passed:true, severity:'pass', actual_value:0.30,   min_threshold:0.25,max_threshold:0.45, message:'人脸尺寸正常: 面积比=30% 高度比=52%' },
             { checker_name:'face_integrity_check',     category:'face',        passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:0,    message:'人脸完整在画面内' },
             { checker_name:'eye_closure_check',        category:'state',       passed:true, severity:'pass', actual_value:0.34,   min_threshold:0.20,max_threshold:0,    message:'眼睛睁开: EAR=0.34' },
             { checker_name:'mouth_open_check',         category:'state',       passed:true, severity:'pass', actual_value:0.04,   min_threshold:0,   max_threshold:0.25, message:'嘴巴闭合: MAR=0.04' },
             { checker_name:'head_pose_check',          category:'state',       passed:true, severity:'pass', actual_value:2.1,    min_threshold:0,   max_threshold:10.0, message:'头部姿态正常' },
-            { checker_name:'head_tilt_check',          category:'composition',  passed:true, severity:'pass', actual_value:0.6,    min_threshold:0,   max_threshold:5.0,  message:'眼线倾角: 0.6°' },
             { checker_name:'centering_check',          category:'composition',  passed:true, severity:'pass', actual_value:1.2,    min_threshold:0,   max_threshold:5.0,  message:'人脸居中: 偏移1.2%' },
-            { checker_name:'face_ratio_check',         category:'composition',  passed:true, severity:'pass', actual_value:0.52,   min_threshold:0.45,max_threshold:0.58, message:'面部高度比: 52%' },
             { checker_name:'blur_check',               category:'quality',     passed:true, severity:'pass', actual_value:338,    min_threshold:200, max_threshold:0,    message:'面部清晰: Laplacian var=338' },
             { checker_name:'exposure_check',           category:'quality',     passed:true, severity:'pass', actual_value:142,    min_threshold:120, max_threshold:200,  message:'面部曝光适中: 142' },
             { checker_name:'contrast_check',           category:'quality',     passed:true, severity:'pass', actual_value:35,     min_threshold:12,  max_threshold:85,   message:'面部对比度OK: RMS=35' },
@@ -239,7 +235,7 @@ function generateDemoReport() {
             { checker_name:'color_space_check',        category:'file',         passed:true, severity:'pass', actual_value:3,      min_threshold:0,   max_threshold:0,    message:'色彩空间: RGB' },
             { checker_name:'dpi_check',                category:'file',         passed:true, severity:'pass', actual_value:350,    min_threshold:350, max_threshold:350,  message:'DPI: 350' },
         ],
-        summary: '40/40 通过',
+        summary: '39/39 通过',
         file_info: { path: '', width: 358, height: 441, file_size_bytes: 18432, format: 'JPEG' }
     };
 }
@@ -250,10 +246,9 @@ const HARD_BLOCK_CHECKS = [
     'face_detect_check', 'face_count_check', 'face_confidence_check',
     'eye_closure_check', 'mouth_open_check', 'head_pose_check',
     'head_margin_check', 'centering_check',
-    'face_size_check', 'face_ratio_check',
+    'face_size_check',
     'face_skin_tone_check', 'face_occlusion_check',
-    'background_color_check', 'overexposure_check',
-    'head_tilt_check'
+    'background_color_check', 'overexposure_check'
 ];
 
 // ========================
@@ -278,7 +273,7 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
         case 'face_confidence_check':
             return passed ? `人脸置信度: ${av}` : `人脸置信度过低: ${av}（要求≥${minVal}）`;
         case 'face_size_check':
-            return passed ? `人脸面积占比: ${av}` : `人脸面积占比不合适: ${av}（要求${minVal}-${maxVal}）`;
+            return passed ? `人脸尺寸正常: 面积比=${av}` : rawMsg || `人脸尺寸异常: ${av}（要求${minVal}-${maxVal}）`;
         case 'face_skin_tone_check':
             return passed ? `肤色正常: Cr=${av}` : rawMsg || '面部肤色异常，可能存在偏色';
         case 'face_occlusion_check':
@@ -328,16 +323,12 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
         // ---- 构图 ----
         case 'centering_check':
             return passed ? `人脸居中: 偏移${av}%` : `人脸未居中: 偏移${av}%（阈值${maxVal}%）`;
-        case 'face_ratio_check':
-            return passed ? `面部高度比: ${av}` : `面部高度比不合适: ${av}（要求${minVal}-${maxVal}）`;
         case 'head_margin_check':
             return passed ? `头顶留白OK: ${av}` : `头顶留白不合适: ${av}（要求${minVal}-${maxVal}）`;
         case 'chin_margin_check':
             return passed ? `下巴留白OK: ${av}px` : `下巴留白不足: ${av}px（要求≥${minVal}px）`;
         case 'side_margin_check':
             return passed ? `两侧留白OK` : `两侧留白不足（要求≥${minVal}px）`;
-        case 'head_tilt_check':
-            return passed ? `头部倾斜OK: ${av}°` : `头部倾斜: ${av}°（阈值${maxVal}°）`;
         case 'face_aspect_ratio_check':
             return passed ? `面部宽高比正常: ${av}` : `面部宽高比异常: ${av}（要求${minVal}-${maxVal}）`;
 
