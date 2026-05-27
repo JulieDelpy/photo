@@ -148,31 +148,6 @@ int main(int argc, char* argv[]) {
             return;
         }
 
-        // --- 智能预处理：大图等比缩放+居中裁剪至标准 358x441，小图不做放大 ---
-        constexpr int kTargetW = 358;
-        constexpr int kTargetH = 441;
-        int srcW = image.cols, srcH = image.rows;
-        bool needResize = (srcW > kTargetW || srcH > kTargetH);
-        if (needResize) {
-            double srcAspect = static_cast<double>(srcW) / srcH;
-            double dstAspect = static_cast<double>(kTargetW) / kTargetH;
-            int newW, newH;
-            if (srcAspect > dstAspect) {
-                newH = kTargetH;
-                newW = static_cast<int>(kTargetH * srcAspect);
-            } else {
-                newW = kTargetW;
-                newH = static_cast<int>(kTargetW / srcAspect);
-            }
-            cv::Mat scaled;
-            cv::resize(image, scaled, cv::Size(newW, newH), 0, 0, cv::INTER_AREA);
-            int cx = (newW - kTargetW) / 2;
-            int cy = (newH - kTargetH) / 2;
-            cv::Rect roi(cx, cy, kTargetW, kTargetH);
-            roi &= cv::Rect(0, 0, newW, newH);
-            image = scaled(roi).clone();
-        }
-
         // --- Face detection ---
         photo::FaceInfo face = analyzer.detect(image);
 
