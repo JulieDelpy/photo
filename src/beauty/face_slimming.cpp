@@ -9,7 +9,7 @@ namespace photo {
 class FaceSlimmingEffect : public IBeautyEffect {
 public:
     const char* name() const override { return "face_slimming"; }
-    const char* version() const override { return "2.0.0"; }
+    const char* version() const override { return "2.0.1"; }
 
     std::map<std::string, ParamDef> defaultParams() const override {
         return {
@@ -35,7 +35,6 @@ public:
         roi &= cv::Rect(0, 0, image.cols, image.rows);
         if (roi.area() <= 0) return false;
 
-        float cx = roi.width / 2.0f;
         float face_cx = face.bbox.x + face.bbox.width / 2.0f - roi.x;
         float jaw_top = roi.height * 0.45f;
 
@@ -44,7 +43,6 @@ public:
 
         for (int y = 0; y < roi.height; y++) {
             float ry = static_cast<float>(y);
-            // 颚部以下逐渐增强
             float jaw_t = (ry - jaw_top) / (roi.height - jaw_top);
             jaw_t = std::max(0.0f, std::min(1.0f, jaw_t));
 
@@ -53,17 +51,14 @@ public:
                 float dx = rx - face_cx;
                 float abs_dx = std::abs(dx);
 
-                // 基于人脸宽度的归一化距离
                 float half_w = face.bbox.width * 0.55f;
-                float nd = abs_dx / std::max(half_w, 1.0f);  // 0 在中心, >1 在边缘外
+                float nd = abs_dx / std::max(half_w, 1.0f);
 
-                // smoothstep 衰减：边缘强，中心弱
                 float edge_w = nd < 0.5f ? 0.0f
                     : nd > 1.2f ? 1.0f
                     : (nd - 0.5f) / 0.7f;
-                edge_w = edge_w * edge_w * (3.0f - 2.0f * edge_w);  // smoothstep
+                edge_w = edge_w * edge_w * (3.0f - 2.0f * edge_w);
 
-                // 上半脸用 cheek 强度，下半脸用 jaw 强度
                 float strength = cheek_s + (jaw_s - cheek_s) * jaw_t;
                 float shift = dx * edge_w * strength * 0.12f;
 
@@ -75,10 +70,39 @@ public:
         cv::Mat warped;
         cv::remap(image, warped, map_x, map_y, cv::INTER_CUBIC, cv::BORDER_REPLICATE);
 
-        // 混合到原图 ROI
-        cv::Mat result_roi = image(roi).clone();
-        cv::addWeighted(warped, 0.85f, result_roi, 0.15f, 0, result_roi);
-        result_roi.copyTo(image(roi));
+        // ---- ROI 边缘羽化掩膜：避免边界割裂 ----
+        cv::Mat feather(roi.size(), CV_32F);
+        float fr = static_cast<float>(std::min(roi.width, roi.height)) * 0.12f;
+        fr = std::max(fr, 8.0f);
+        for (int y = 0; y < roi.height; y++) {
+            float dy = std::min({static_cast<float>(y),
+                                 static_cast<float>(roi.height - 1 - y)}) / fr;
+            dy = std::min(1.0f, dy);
+            float sy = dy * dy * (3.0f - 2.0f * dy);  // smoothstep
+            for (int x = 0; x < roi.width; x++) {
+                float dx = std::min({static_cast<float>(x),
+                                     static_cast<float>(roi.width - 1 - x)}) / fr;
+                dx = std::min(1.0f, dx);
+                float sx = dx * dx * (3.0f - 2.0f * dx);
+                feather.at<float>(y, x) = std::min(sx, sy);
+            }
+        }
+
+        // 用羽化掩膜逐通道混合
+        float blend = 0.88f;
+        cv::Mat orig_f, warp_f;
+        image(roi).convertTo(orig_f, CV_32F);
+        warped.convertTo(warp_f, CV_32F);
+        std::vector<cv::Mat> och(3), wch(3);
+        cv::split(orig_f, och);
+        cv::split(warp_f, wch);
+        for (int c = 0; c < 3; c++) {
+            cv::Mat alpha = feather * blend;
+            och[c] = wch[c].mul(alpha) + och[c].mul(1.0f - alpha);
+        }
+        cv::Mat merged;
+        cv::merge(och, merged);
+        merged.convertTo(image(roi), CV_8U);
 
         return true;
     }

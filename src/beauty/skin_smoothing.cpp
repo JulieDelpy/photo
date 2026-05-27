@@ -8,7 +8,7 @@ namespace photo {
 class SkinSmoothingEffect : public IBeautyEffect {
 public:
     const char* name() const override { return "skin_smoothing"; }
-    const char* version() const override { return "2.0.1"; }
+    const char* version() const override { return "2.0.2"; }
 
     std::map<std::string, ParamDef> defaultParams() const override {
         return {
@@ -67,14 +67,26 @@ public:
         float detail_gain = 1.0f - texture * strength;  // 1.0 ~ 0.0
         cv::Mat result = base_sm + detail * detail_gain;  // CV_32F
 
+        // ---- ROI 边缘羽化掩膜 ----
+        cv::Mat feather(roi.size(), CV_32F, 1.0f);
+        float fr = static_cast<float>(roi.height) * 0.10f;  // 上下各 10% 羽化
+        for (int y = 0; y < roi.height; y++) {
+            float dy = std::min({static_cast<float>(y),
+                                 static_cast<float>(roi.height - 1 - y)}) / fr;
+            if (dy < 1.0f) {
+                float s = dy * dy * (3.0f - 2.0f * dy);  // smoothstep
+                for (int x = 0; x < roi.width; x++)
+                    feather.at<float>(y, x) = s;
+            }
+        }
+
         // ---- 按掩膜混合原图与平滑结果 ----
-        cv::Mat blend_mask = mask * strength;  // CV_32FC1, 0~1
+        cv::Mat blend_mask = mask.mul(feather) * strength;  // 肤色掩膜 × 羽化
         std::vector<cv::Mat> sch(3), rch(3), och(3);
-        cv::split(src,    sch);   // 3 × CV_32FC1
+        cv::split(src,    sch);
         cv::split(result, rch);
 
         for (int c = 0; c < 3; c++) {
-            // och[c] = src*(1-mask*S) + result*(mask*S)  (全 CV_32F)
             och[c] = sch[c].mul(1.0f - blend_mask) + rch[c].mul(blend_mask);
         }
 
