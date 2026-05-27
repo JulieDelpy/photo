@@ -67,7 +67,7 @@ public:
                 float strength = cheek_s + (jaw_s - cheek_s) * jaw_t;
                 float shift = dx * edge_w * strength * 0.12f;
 
-                map_x.at<float>(y, x) = rx - shift + roi.x;
+                map_x.at<float>(y, x) = rx + shift + roi.x;
                 map_y.at<float>(y, x) = ry + roi.y;
             }
         }
