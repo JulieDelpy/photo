@@ -66,6 +66,8 @@ const CATEGORY_CN = {
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 
+dropZone.addEventListener('click', () => fileInput.click());
+
 dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropZone.classList.add('dragover');
