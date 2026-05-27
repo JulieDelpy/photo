@@ -2,18 +2,19 @@
 #include "photo/plugin/plugin_macros.hpp"
 #include <opencv2/imgproc.hpp>
 #include <cmath>
+#include <algorithm>
 
 namespace photo {
 
 class FaceSlimmingEffect : public IBeautyEffect {
 public:
     const char* name() const override { return "face_slimming"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "2.0.0"; }
 
     std::map<std::string, ParamDef> defaultParams() const override {
         return {
-            {"jaw_strength", {0.5f, 0.0f, 1.0f, "Jaw slimming strength (0=none, 1=max)"}},
-            {"cheek_strength", {0.3f, 0.0f, 0.7f, "Cheek slimming strength (0=none, 0.7=max)"}}
+            {"jaw_strength", {0.35f, 0.0f, 0.7f, "Jaw slimming strength"}},
+            {"cheek_strength", {0.20f, 0.0f, 0.5f, "Cheek slimming strength"}}
         };
     }
 
@@ -21,66 +22,62 @@ public:
                const ParamMap& params) override {
         if (!face.detected) return false;
 
-        float jaw_strength = getParam(params, "jaw_strength", 0.5f);
-        float cheek_strength = getParam(params, "cheek_strength", 0.3f);
-
-        if (jaw_strength <= 0.0f && cheek_strength <= 0.0f) return true;
+        float jaw_s = getParam(params, "jaw_strength", 0.35f);
+        float cheek_s = getParam(params, "cheek_strength", 0.20f);
+        if (jaw_s <= 0.0f && cheek_s <= 0.0f) return true;
 
         cv::Rect roi = face.bbox;
-        // Expand ROI for deformation margin
-        int margin = static_cast<int>(roi.width * 0.3);
+        int margin = static_cast<int>(roi.width * 0.25);
         roi.x = std::max(0, roi.x - margin);
-        roi.y = std::max(0, roi.y - margin / 2);
+        roi.y = std::max(0, roi.y - margin / 3);
         roi.width = std::min(image.cols - roi.x, roi.width + 2 * margin);
         roi.height = std::min(image.rows - roi.y, roi.height + margin);
         roi &= cv::Rect(0, 0, image.cols, image.rows);
-
         if (roi.area() <= 0) return false;
 
-        // Build deformation map using MLS-like approach
-        // Simplified: horizontal compression in lower half of face
+        float cx = roi.width / 2.0f;
+        float face_cx = face.bbox.x + face.bbox.width / 2.0f - roi.x;
+        float jaw_top = roi.height * 0.45f;
+
         cv::Mat map_x(roi.size(), CV_32F);
         cv::Mat map_y(roi.size(), CV_32F);
 
-        float cx = roi.width / 2.0f;
-        float cy = roi.height / 2.0f;
-        float jaw_y_start = roi.height * 0.5f;
-        float jaw_radius = roi.width * 0.8f;
-
         for (int y = 0; y < roi.height; y++) {
+            float ry = static_cast<float>(y);
+            // 颚部以下逐渐增强
+            float jaw_t = (ry - jaw_top) / (roi.height - jaw_top);
+            jaw_t = std::max(0.0f, std::min(1.0f, jaw_t));
+
             for (int x = 0; x < roi.width; x++) {
-                float dx = static_cast<float>(x) - cx;
-                float dy = static_cast<float>(y) - jaw_y_start;
+                float rx = static_cast<float>(x);
+                float dx = rx - face_cx;
+                float abs_dx = std::abs(dx);
 
-                float dist = std::sqrt(dx * dx + dy * dy);
-                float influence;
+                // 基于人脸宽度的归一化距离
+                float half_w = face.bbox.width * 0.55f;
+                float nd = abs_dx / std::max(half_w, 1.0f);  // 0 在中心, >1 在边缘外
 
-                if (y < jaw_y_start) {
-                    // Upper face: cheek area (weaker effect)
-                    influence = cheek_strength * std::exp(-dist * dist / (2.0f * jaw_radius * jaw_radius));
-                    influence *= static_cast<float>(y) / jaw_y_start; // Fade to zero at top
-                } else {
-                    // Lower face: jaw area (stronger effect)
-                    float jaw_dist = std::sqrt(dx * dx + (dy * 0.8f) * (dy * 0.8f));
-                    float jaw_influence = std::exp(-jaw_dist * jaw_dist / (2.0f * jaw_radius * jaw_radius * 0.25f));
-                    influence = jaw_strength * jaw_influence;
-                }
+                // smoothstep 衰减：边缘强，中心弱
+                float edge_w = nd < 0.5f ? 0.0f
+                    : nd > 1.2f ? 1.0f
+                    : (nd - 0.5f) / 0.7f;
+                edge_w = edge_w * edge_w * (3.0f - 2.0f * edge_w);  // smoothstep
 
-                float new_x = static_cast<float>(x) + dx * influence * 0.15f;
-                map_x.at<float>(y, x) = new_x + roi.x;
-                map_y.at<float>(y, x) = static_cast<float>(y) + roi.y;
+                // 上半脸用 cheek 强度，下半脸用 jaw 强度
+                float strength = cheek_s + (jaw_s - cheek_s) * jaw_t;
+                float shift = dx * edge_w * strength * 0.12f;
+
+                map_x.at<float>(y, x) = rx - shift + roi.x;
+                map_y.at<float>(y, x) = ry + roi.y;
             }
         }
 
-        cv::Mat roi_img = image(roi).clone();
         cv::Mat warped;
-        cv::remap(image, warped, map_x, map_y, cv::INTER_LINEAR, cv::BORDER_REPLICATE);
-        cv::Mat warped_roi = warped(roi);
+        cv::remap(image, warped, map_x, map_y, cv::INTER_CUBIC, cv::BORDER_REPLICATE);
 
-        // Smooth feathering on edges of modified region
+        // 混合到原图 ROI
         cv::Mat result_roi = image(roi).clone();
-        float blend_strength = 0.8f;
-        cv::addWeighted(warped_roi, blend_strength, result_roi, 1.0f - blend_strength, 0, result_roi);
+        cv::addWeighted(warped, 0.85f, result_roi, 0.15f, 0, result_roi);
         result_roi.copyTo(image(roi));
 
         return true;

@@ -1,17 +1,19 @@
 #include "photo/plugin/ibeauty_effect.hpp"
 #include "photo/plugin/plugin_macros.hpp"
 #include <opencv2/imgproc.hpp>
+#include <cmath>
 
 namespace photo {
 
 class SkinWhiteningEffect : public IBeautyEffect {
 public:
     const char* name() const override { return "skin_whitening"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "2.0.0"; }
 
     std::map<std::string, ParamDef> defaultParams() const override {
         return {
-            {"strength", {0.5f, 0.0f, 1.0f, "Whitening strength (0=none, 1=max)"}}
+            {"strength", {0.3f, 0.0f, 1.0f, "Whitening strength"}},
+            {"warmth",   {0.4f, 0.0f, 1.0f, "Skin warmth preservation (0=cold, 1=warm)"}}
         };
     }
 
@@ -19,43 +21,55 @@ public:
                const ParamMap& params) override {
         if (!face.detected) return false;
 
-        float strength = getParam(params, "strength", 0.5f);
+        float strength = getParam(params, "strength", 0.3f);
+        float warmth = getParam(params, "warmth", 0.4f);
+        if (strength <= 0.001f) return true;
 
-        // Skin mask
+        // 肤色掩膜
         cv::Mat hsv;
         cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
+        cv::Mat skin;
+        cv::inRange(hsv, cv::Scalar(0, 15, 40), cv::Scalar(25, 160, 255), skin);
+        cv::GaussianBlur(skin, skin, cv::Size(35, 35), 0);
 
-        cv::Mat skin_mask;
-        cv::inRange(hsv,
-                    cv::Scalar(0, 20, 40),
-                    cv::Scalar(25, 150, 255),
-                    skin_mask);
+        // 转为 LAB 空间处理：L 通道提亮（感知亮度），A/B 通道不位移
+        cv::Mat lab;
+        cv::cvtColor(image, lab, cv::COLOR_BGR2Lab);
+        std::vector<cv::Mat> lab_ch;
+        cv::split(lab, lab_ch);
 
-        cv::GaussianBlur(skin_mask, skin_mask, cv::Size(31, 31), 0);
-        cv::Mat mask_float;
-        skin_mask.convertTo(mask_float, CV_32F, 1.0 / 255.0);
-        mask_float *= strength;
+        cv::Mat l_f;
+        lab_ch[0].convertTo(l_f, CV_32F);
 
-        // Convert to HSV and increase V channel on skin regions
-        std::vector<cv::Mat> hsv_channels;
-        cv::split(hsv, hsv_channels);
+        // log 曲线提亮：暗部多提、亮部少提，保留高光过渡自然
+        cv::Mat mask_f;
+        skin.convertTo(mask_f, CV_32F, 1.0 / 255.0);
 
-        hsv_channels[2].convertTo(hsv_channels[2], CV_32F);
-        // Apply gamma-like brightening: V_new = V + (255-V) * mask * strength
-        cv::Mat v_boost = (255.0f - hsv_channels[2]).mul(mask_float) * 0.5f;
-        hsv_channels[2] += v_boost;
-        hsv_channels[2] = cv::min(hsv_channels[2], 255.0f);
-        hsv_channels[2].convertTo(hsv_channels[2], CV_8U);
+        // 基于当前 L 的提亮量：L_new = L + (255-L) * (L/255)^0.4 * mask * strength * 0.35
+        cv::Mat l_ratio;
+        cv::divide(l_f, 255.0f, l_ratio);
+        cv::Mat l_pow;
+        cv::pow(l_ratio, 0.4f, l_pow);  // 暗部 0.4 次方 → 多提
+        cv::Mat boost = (255.0f - l_f).mul(l_pow).mul(mask_f) * strength * 0.35f;
+        lab_ch[0] = l_f + boost;
+        cv::min(lab_ch[0], 255.0f, lab_ch[0]);
 
-        // Reduce saturation slightly for natural look
-        hsv_channels[1].convertTo(hsv_channels[1], CV_32F);
-        cv::Mat s_reduce = hsv_channels[1].mul(mask_float) * 0.3f;
-        hsv_channels[1] -= s_reduce;
-        hsv_channels[1] = cv::max(hsv_channels[1], 0.0f);
-        hsv_channels[1].convertTo(hsv_channels[1], CV_8U);
-
-        cv::merge(hsv_channels, hsv);
-        cv::cvtColor(hsv, image, cv::COLOR_HSV2BGR);
+        // A/B 通道微调：保留暖色调
+        if (warmth > 0.01f) {
+            for (int c = 1; c <= 2; c++) {
+                cv::Mat ch_f;
+                lab_ch[c].convertTo(ch_f, CV_32F);
+                // 向 128(中性色) 微调，程度由 warmth 控制
+                float pull = strength * (1.0f - warmth) * 0.15f;
+                cv::Mat adj = (128.0f - ch_f) * pull;
+                lab_ch[c] = ch_f + adj.mul(mask_f);
+            }
+        }
+        lab_ch[0].convertTo(lab_ch[0], CV_8U);
+        lab_ch[1].convertTo(lab_ch[1], CV_8U);
+        lab_ch[2].convertTo(lab_ch[2], CV_8U);
+        cv::merge(lab_ch, lab);
+        cv::cvtColor(lab, image, cv::COLOR_Lab2BGR);
 
         return true;
     }
