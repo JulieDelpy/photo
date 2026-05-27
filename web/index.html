@@ -96,15 +96,16 @@
                     <div class="tile-icon">&#129498;</div>
                     <div class="tile-name">磨皮</div>
                     <div class="tile-desc">光滑肌肤纹理</div>
-                    <input type="range" id="smooth_strength" min="0" max="100" value="50" title="强度">
-                    <input type="range" id="smooth_radius" min="3" max="30" value="10" title="半径">
+                    <input type="range" id="smooth_strength" min="0" max="100" value="30" title="磨皮强度">
+                    <input type="range" id="smooth_texture" min="0" max="100" value="60" title="纹理保留">
                     <button class="btn btn-sm btn-primary" onclick="applyBeauty('skin_smoothing')">应用</button>
                 </div>
                 <div class="beauty-tile" id="tile_whitening">
                     <div class="tile-icon">&#127775;</div>
                     <div class="tile-name">美白</div>
                     <div class="tile-desc">提亮肤色</div>
-                    <input type="range" id="whiten_strength" min="0" max="100" value="50" title="强度">
+                    <input type="range" id="whiten_strength" min="0" max="100" value="30" title="美白强度">
+                    <input type="range" id="whiten_warmth" min="0" max="100" value="40" title="肤色冷暖">
                     <button class="btn btn-sm btn-primary" onclick="applyBeauty('skin_whitening')">应用</button>
                 </div>
                 <div class="beauty-tile" id="tile_eye">
@@ -118,7 +119,8 @@
                     <div class="tile-icon">&#128100;</div>
                     <div class="tile-name">瘦脸</div>
                     <div class="tile-desc">收紧下颌线条</div>
-                    <input type="range" id="jaw_strength" min="0" max="100" value="50" title="下颌调整">
+                    <input type="range" id="jaw_strength" min="0" max="100" value="35" title="下颌收紧">
+                    <input type="range" id="cheek_strength" min="0" max="100" value="20" title="脸颊收紧">
                     <button class="btn btn-sm btn-primary" onclick="applyBeauty('face_slimming')">应用</button>
                 </div>
             </div>

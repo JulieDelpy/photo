@@ -567,14 +567,16 @@ function applyBeauty(effectName) {
 async function applyBeautyViaAPI(effectName) {
     const params = {};
     if (effectName === 'skin_smoothing') {
-        params.strength = parseInt(document.getElementById('smooth_strength')?.value || 50);
-        params.radius   = parseInt(document.getElementById('smooth_radius')?.value || 10);
+        params.strength = (parseInt(document.getElementById('smooth_strength')?.value) || 30) / 100;
+        params.texture  = (parseInt(document.getElementById('smooth_texture')?.value)  || 60) / 100;
     } else if (effectName === 'skin_whitening') {
-        params.strength = parseInt(document.getElementById('whiten_strength')?.value || 50);
+        params.strength = (parseInt(document.getElementById('whiten_strength')?.value) || 30) / 100;
+        params.warmth   = (parseInt(document.getElementById('whiten_warmth')?.value)   || 40) / 100;
     } else if (effectName === 'eye_enlargement') {
-        params.factor = parseInt(document.getElementById('eye_factor')?.value || 15);
+        params.factor = (parseInt(document.getElementById('eye_factor')?.value) || 15) / 100;
     } else if (effectName === 'face_slimming') {
-        params.jaw_strength = parseInt(document.getElementById('jaw_strength')?.value || 50);
+        params.jaw_strength   = (parseInt(document.getElementById('jaw_strength')?.value)   || 35) / 100;
+        params.cheek_strength = (parseInt(document.getElementById('cheek_strength')?.value) || 20) / 100;
     }
 
     const formData = new FormData();
