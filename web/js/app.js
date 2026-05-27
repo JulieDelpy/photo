@@ -42,6 +42,7 @@ const CHECKER_CN = {
     background_uniformity_check: '背景均匀度',
     background_texture_check: '背景纹理',
     background_edge_check:    '背景边缘',
+    border_check:             '边缘阴影',
     file_dimension_check:     '图像尺寸',
     file_aspect_ratio_check:  '图像宽高比',
     file_size_check:          '文件大小',
@@ -187,8 +188,8 @@ function generateDemoReport() {
         photo_type: 'id_card_cn',
         photo_display_name: '第二代居民身份证照片 (GA标准) — 演示数据',
         overall_pass: true,
-        total_checks: 39,
-        passed_checks: 39,
+        total_checks: 40,
+        passed_checks: 40,
         failed_checks: 0,
         warning_checks: 0,
         face_info: {
@@ -228,6 +229,7 @@ function generateDemoReport() {
             { checker_name:'background_uniformity_check',category:'background',  passed:true, severity:'pass', actual_value:12,     min_threshold:0,   max_threshold:60,   message:'背景均匀' },
             { checker_name:'background_texture_check', category:'background',   passed:true, severity:'pass', actual_value:8,      min_threshold:0,   max_threshold:22,   message:'背景纹理可接受' },
             { checker_name:'background_edge_check',    category:'background',   passed:true, severity:'pass', actual_value:0.03,   min_threshold:0,   max_threshold:0.12, message:'背景边缘OK' },
+            { checker_name:'border_check',             category:'background',   passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:22,   message:'背景边缘均匀: 差值=0' },
             { checker_name:'file_dimension_check',     category:'file',         passed:true, severity:'pass', actual_value:358,    min_threshold:358, max_threshold:358,  message:'尺寸: 358×441' },
             { checker_name:'file_aspect_ratio_check',  category:'file',         passed:true, severity:'pass', actual_value:0.811,  min_threshold:0,   max_threshold:0,    message:'宽高比: 0.811' },
             { checker_name:'file_size_check',          category:'file',         passed:true, severity:'pass', actual_value:18,     min_threshold:14,  max_threshold:20,   message:'文件大小: 18KB' },
@@ -235,7 +237,7 @@ function generateDemoReport() {
             { checker_name:'color_space_check',        category:'file',         passed:true, severity:'pass', actual_value:3,      min_threshold:0,   max_threshold:0,    message:'色彩空间: RGB' },
             { checker_name:'dpi_check',                category:'file',         passed:true, severity:'pass', actual_value:350,    min_threshold:350, max_threshold:350,  message:'DPI: 350' },
         ],
-        summary: '39/39 通过',
+        summary: '40/40 通过',
         file_info: { path: '', width: 358, height: 441, file_size_bytes: 18432, format: 'JPEG' }
     };
 }
@@ -248,7 +250,8 @@ const HARD_BLOCK_CHECKS = [
     'head_margin_check', 'centering_check',
     'face_size_check',
     'face_skin_tone_check', 'face_occlusion_check',
-    'background_color_check', 'overexposure_check'
+    'background_color_check', 'overexposure_check',
+    'border_check'
 ];
 
 // ========================
@@ -341,6 +344,8 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
             return passed ? `背景纹理可接受: 方差=${av}` : `背景纹理过多: 方差=${av}（阈值${maxVal}）`;
         case 'background_edge_check':
             return passed ? `背景边缘干净: 密度=${av}` : `背景存在边缘/杂物: 密度=${av}（阈值${maxVal}）`;
+        case 'border_check':
+            return passed ? `背景边缘均匀: 差值=${av}` : rawMsg || `背景边缘阴影/不均: ${av}`;
 
         // ---- 文件规格 ----
         case 'file_dimension_check':

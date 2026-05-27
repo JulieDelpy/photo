@@ -87,6 +87,7 @@
     "background_uniformity_check",
     "background_texture_check",
     "background_edge_check",
+    "border_check",
     "file_dimension_check",
     "file_aspect_ratio_check",
     "file_size_check",

@@ -66,6 +66,7 @@ add_library(photo_quality OBJECT
     src/quality/background_uniformity_checker.cpp
     src/quality/background_texture_checker.cpp
     src/quality/background_edge_checker.cpp
+    src/quality/border_checker.cpp
     src/quality/file_dimension_checker.cpp
     src/quality/file_aspect_ratio_checker.cpp
     src/quality/file_size_checker.cpp
