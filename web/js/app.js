@@ -573,7 +573,7 @@ async function applyBeautyViaAPI(effectName) {
         params.strength = (parseInt(document.getElementById('whiten_strength')?.value) || 30) / 100;
         params.warmth   = (parseInt(document.getElementById('whiten_warmth')?.value)   || 40) / 100;
     } else if (effectName === 'eye_enlargement') {
-        params.factor = (parseInt(document.getElementById('eye_factor')?.value) || 15) / 100;
+        params.factor = (parseInt(document.getElementById('eye_factor')?.value) || 10) / 100;
     } else if (effectName === 'face_slimming') {
         params.jaw_strength   = (parseInt(document.getElementById('jaw_strength')?.value)   || 35) / 100;
         params.cheek_strength = (parseInt(document.getElementById('cheek_strength')?.value) || 20) / 100;

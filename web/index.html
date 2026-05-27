@@ -7,120 +7,111 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header>
-        <h1>照片质量评价 & 美颜系统</h1>
-        <p>基于 GA/护照标准的证件照合规检查 + AI 美颜效果</p>
-    </header>
+    <div class="container">
+        <!-- ====== 标题 ====== -->
+        <header>
+            <h1>照片质量评价 <span class="amp">&amp;</span> 美颜系统</h1>
+            <p class="subtitle">上传照片，一键检测合规性；智能美颜，自然提升形象</p>
+        </header>
 
-    <main>
-        <!-- Upload Card -->
-        <section class="card" id="uploadCard">
-            <div class="card-header">
-                <h2>上传照片</h2>
-            </div>
-            <div class="drop-zone" id="dropZone">
+        <!-- ====== 上传区 ====== -->
+        <section class="card upload-section">
+            <div id="dropZone" class="drop-zone">
                 <div class="drop-icon">&#128247;</div>
-                <p>拖拽照片到此处，或点击下方按钮选择文件</p>
-                <input type="file" id="fileInput" accept="image/*" hidden>
-                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                    选择照片
-                </button>
+                <p>拖拽照片到此处，或 <span class="link">点击选择文件</span></p>
+                <p class="hint">支持 JPEG / PNG，建议 358×441 像素</p>
+                <input type="file" id="fileInput" accept="image/jpeg,image/png" hidden>
             </div>
-            <div class="controls" id="controls" style="display:none;">
-                <label>照片类型：</label>
-                <select id="photoType">
-                    <option value="id_card_cn">身份证 (358×441)</option>
-                    <option value="passport_cn">护照 (390×567)</option>
-                    <option value="drivers_license">驾驶证</option>
-                    <option value="gaokao">高考照</option>
-                </select>
-                <button class="btn btn-success" onclick="runQualityCheck()">运行质量检查</button>
-            </div>
-        </section>
-
-        <!-- Preview Card -->
-        <section class="card animate-in" id="previewCard" style="display:none;">
-            <div class="card-header">
-                <h2>照片预览</h2>
-            </div>
-            <div class="preview-grid">
-                <div class="preview-img-wrap">
-                    <img id="previewImage" alt="预览照片">
+            <div id="previewArea" class="preview-area" style="display:none;">
+                <img id="previewImg" alt="预览">
+                <div class="preview-actions">
+                    <button class="btn btn-primary" onclick="runQualityCheck()">&#128269; 质量检测</button>
+                    <button class="btn btn-outline" onclick="resetPhoto()">重新选择</button>
                 </div>
-                <div class="preview-meta" id="previewMeta"></div>
             </div>
         </section>
 
-        <!-- Results Card -->
-        <section class="card animate-in" id="resultsCard" style="display:none;">
-            <div class="card-header">
-                <h2>质量检查结果</h2>
+        <!-- ====== 质量报告 ====== -->
+        <section id="resultSection" class="card" style="display:none;">
+            <div class="result-header">
+                <h2>检测报告</h2>
+                <div class="result-badges">
+                    <span id="badgeOverall" class="badge"></span>
+                    <span id="badgeCount" class="badge"></span>
+                </div>
             </div>
-            <div class="summary-bar" id="summaryBar"></div>
-            <div class="stats-row" id="statsRow"></div>
-            <div class="filter-bar" id="filterBar" style="display:none;">
-                <button class="btn btn-xs btn-outline active" data-filter="all">全部</button>
-                <button class="btn btn-xs btn-outline" data-filter="fail">拒绝</button>
-                <button class="btn btn-xs btn-outline" data-filter="warn">建议</button>
-                <button class="btn btn-xs btn-outline" data-filter="pass">通过</button>
-                <span class="filter-stat" id="filterStat"></span>
+
+            <div id="photoInfo" class="photo-info"></div>
+
+            <div class="filter-bar">
+                <button class="filter-chip active" data-filter="all">全部</button>
+                <button class="filter-chip" data-filter="fail">&#128308; 不合格</button>
+                <button class="filter-chip" data-filter="warning">&#128993; 建议优化</button>
+                <button class="filter-chip" data-filter="pass">&#128994; 合格</button>
             </div>
+
             <div class="table-wrap">
-                <table class="results-table" id="resultsTable">
+                <table>
                     <thead>
                         <tr>
-                            <th>结果</th>
-                            <th>检查项</th>
+                            <th>状态</th>
                             <th>类别</th>
+                            <th>检测项</th>
                             <th>实测值</th>
-                            <th>参考阈值</th>
-                            <th>详细说明</th>
+                            <th>说明</th>
                         </tr>
                     </thead>
-                    <tbody id="resultsBody"></tbody>
+                    <tbody id="resultTable"></tbody>
                 </table>
-            </div>
-            <div class="empty-state" id="emptyState" style="display:none;">
-                <span class="empty-icon">&#128269;</span>
-                <p>没有匹配的结果</p>
             </div>
         </section>
 
-        <!-- Beauty Card -->
-        <section class="card" id="beautyCard" style="display:none;">
-            <div class="card-header">
+        <!-- ====== 美颜效果 ====== -->
+        <section class="card">
+            <div class="section-header">
                 <h2>美颜效果</h2>
             </div>
             <div class="beauty-grid">
+                <!-- 磨皮 -->
                 <div class="beauty-tile" id="tile_smoothing">
                     <div class="tile-icon">&#129498;</div>
                     <div class="tile-name">磨皮</div>
                     <div class="tile-desc">光滑肌肤纹理</div>
-                    <input type="range" id="smooth_strength" min="0" max="100" value="30" title="磨皮强度">
-                    <input type="range" id="smooth_texture" min="0" max="100" value="60" title="纹理保留">
+                    <label class="slider-label"><span>强度</span><span class="slider-val" id="val_smooth_strength">30</span></label>
+                    <input type="range" id="smooth_strength" min="0" max="100" value="30" oninput="document.getElementById('val_smooth_strength').textContent=this.value">
+                    <label class="slider-label"><span>纹理</span><span class="slider-val" id="val_smooth_texture">60</span></label>
+                    <input type="range" id="smooth_texture" min="0" max="100" value="60" oninput="document.getElementById('val_smooth_texture').textContent=this.value">
                     <button class="btn btn-sm btn-primary" onclick="applyBeauty('skin_smoothing')">应用</button>
                 </div>
+                <!-- 美白 -->
                 <div class="beauty-tile" id="tile_whitening">
                     <div class="tile-icon">&#127775;</div>
                     <div class="tile-name">美白</div>
                     <div class="tile-desc">提亮肤色</div>
-                    <input type="range" id="whiten_strength" min="0" max="100" value="30" title="美白强度">
-                    <input type="range" id="whiten_warmth" min="0" max="100" value="40" title="肤色冷暖">
+                    <label class="slider-label"><span>强度</span><span class="slider-val" id="val_whiten_strength">30</span></label>
+                    <input type="range" id="whiten_strength" min="0" max="100" value="30" oninput="document.getElementById('val_whiten_strength').textContent=this.value">
+                    <label class="slider-label"><span>暖度</span><span class="slider-val" id="val_whiten_warmth">40</span></label>
+                    <input type="range" id="whiten_warmth" min="0" max="100" value="40" oninput="document.getElementById('val_whiten_warmth').textContent=this.value">
                     <button class="btn btn-sm btn-primary" onclick="applyBeauty('skin_whitening')">应用</button>
                 </div>
+                <!-- 大眼 -->
                 <div class="beauty-tile" id="tile_eye">
                     <div class="tile-icon">&#128064;</div>
                     <div class="tile-name">大眼</div>
                     <div class="tile-desc">放大眼部比例</div>
-                    <input type="range" id="eye_factor" min="0" max="30" value="15" title="系数">
+                    <label class="slider-label"><span>幅度</span><span class="slider-val" id="val_eye_factor">10</span></label>
+                    <input type="range" id="eye_factor" min="0" max="25" value="10" oninput="document.getElementById('val_eye_factor').textContent=this.value">
                     <button class="btn btn-sm btn-primary" onclick="applyBeauty('eye_enlargement')">应用</button>
                 </div>
+                <!-- 瘦脸 -->
                 <div class="beauty-tile" id="tile_slimming">
                     <div class="tile-icon">&#128100;</div>
                     <div class="tile-name">瘦脸</div>
                     <div class="tile-desc">收紧下颌线条</div>
-                    <input type="range" id="jaw_strength" min="0" max="100" value="35" title="下颌收紧">
-                    <input type="range" id="cheek_strength" min="0" max="100" value="20" title="脸颊收紧">
+                    <label class="slider-label"><span>下颌</span><span class="slider-val" id="val_jaw_strength">35</span></label>
+                    <input type="range" id="jaw_strength" min="0" max="100" value="35" oninput="document.getElementById('val_jaw_strength').textContent=this.value">
+                    <label class="slider-label"><span>脸颊</span><span class="slider-val" id="val_cheek_strength">20</span></label>
+                    <input type="range" id="cheek_strength" min="0" max="100" value="20" oninput="document.getElementById('val_cheek_strength').textContent=this.value">
                     <button class="btn btn-sm btn-primary" onclick="applyBeauty('face_slimming')">应用</button>
                 </div>
             </div>
@@ -133,12 +124,12 @@
             </div>
         </section>
 
-        <!-- Loading Overlay -->
-        <div class="loading-overlay" id="loading" style="display:none;">
+        <!-- ====== Loading ====== -->
+        <div id="loading" class="loading-overlay" style="display:none;">
             <div class="spinner"></div>
             <p>处理中...</p>
         </div>
-    </main>
+    </div>
 
     <script src="js/app.js"></script>
 </body>

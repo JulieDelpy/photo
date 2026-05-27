@@ -373,7 +373,16 @@ main {
 .beauty-tile .tile-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
 .beauty-tile .tile-name { font-weight: 700; font-size: 0.9rem; color: var(--gray-700); }
 .beauty-tile .tile-desc { font-size: 0.75rem; color: var(--gray-400); margin-top: 2px; }
-.beauty-tile input[type="range"] { width: 100%; margin-top: 0.5rem; accent-color: var(--primary); }
+.beauty-tile input[type="range"] { width: 100%; margin-top: 0.25rem; accent-color: var(--primary); }
+.beauty-tile .slider-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.72rem; color: var(--gray-500);
+    margin-top: 0.5rem;
+}
+.beauty-tile .slider-label .slider-val {
+    font-weight: 600; color: var(--primary);
+    min-width: 1.8em; text-align: right;
+}
 
 .compare-container {
     display: flex;
