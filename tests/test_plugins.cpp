@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
+#include <fstream>
 #include "photo/plugin/plugin_manager.hpp"
+#include "photo/core/face_analyzer.hpp"
 #include "photo/plugin/iquality_checker.hpp"
 #include "photo/plugin/ibeauty_effect.hpp"
 #include "photo/core/common.hpp"
