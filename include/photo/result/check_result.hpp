@@ -24,6 +24,7 @@ struct CheckResult {
 struct QualityReport {
     std::string photo_type;         // e.g. "id_card_cn"
     std::string photo_display_name;
+    std::string check_mode = "final"; // "raw" precheck or "final" strict acceptance
     bool overall_pass = false;
 
     int total_checks = 0;

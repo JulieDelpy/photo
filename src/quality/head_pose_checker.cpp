@@ -9,7 +9,7 @@ namespace photo {
 class HeadPoseChecker : public IQualityChecker {
 public:
     const char* name() const override { return "head_pose_check"; }
-    const char* version() const override { return "1.3.0"; }
+    const char* version() const override { return "1.3.1"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& cfg) override {
@@ -35,7 +35,9 @@ public:
         // Yaw: solvePnP yaw + 鼻尖水平偏移比
         double yaw_abs = std::abs(face.yaw);
         double nose_off = std::abs(face.nose_offset_ratio);
-        bool yaw_ok = (yaw_abs <= max_yaw) && (nose_off <= 0.20);
+        bool yaw_solver_reliable = (yaw_abs <= 90.0) || (nose_off > 0.20);
+        bool yaw_ok = (nose_off <= 0.20)
+                   && (!yaw_solver_reliable || yaw_abs <= max_yaw);
 
         // 检测下巴是否接近图像底边或被裁切，此时 pm/emr 不可靠
         bool chin_cropped = false;
@@ -83,6 +85,7 @@ public:
                       + " tilt=" + f(tilt)
                       + " pm=" + f(pm) + " emr=" + f(emr)
                       + " noff=" + f(nose_off)
+                      + " yaw_reliable=" + std::to_string(yaw_solver_reliable ? 1 : 0)
                       + " eye_y=" + f(face.eye_rel_y)
                       + " chin_eye=" + f(face.chin_eye_ratio)
                       + " chin_up=" + std::to_string(chin_up_2d ? 1 : 0);

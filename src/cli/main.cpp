@@ -3,6 +3,7 @@
 #include "photo/plugin/plugin_manager.hpp"
 #include "photo/plugin/iquality_checker.hpp"
 #include "photo/plugin/ibeauty_effect.hpp"
+#include "photo/result/check_mode.hpp"
 #include "photo/result/quality_report.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -23,11 +24,11 @@ using json = nlohmann::json;
 void printUsage(const char* prog) {
     std::cout << "Photo Processing Tool v1.0.0\n\n"
               << "Usage:\n"
-              << "  " << prog << " --check <image> [--standard <json_config>]\n"
+              << "  " << prog << " --check <image> [--standard <json_config>] [--check-mode raw|final]\n"
               << "      Run quality evaluation on a single image.\n\n"
               << "  " << prog << " --beautify <image> --effect <name> [--params <k=v,...>] [--standard <json>]\n"
               << "      Apply a beauty effect to an image.\n\n"
-              << "  " << prog << " --batch <directory> [--standard <json_config>] [--output <dir>]\n"
+              << "  " << prog << " --batch <directory> [--standard <json_config>] [--output <dir>] [--check-mode raw|final]\n"
               << "      Batch process all images in a directory.\n\n"
               << "  " << prog << " --list-checkers\n"
               << "      List all registered quality checkers.\n\n"
@@ -38,6 +39,7 @@ void printUsage(const char* prog) {
               << "  --effect <name>    Beauty effect name\n"
               << "  --params <k=v,..>  Comma-separated key=value parameters\n"
               << "  --output <dir>     Output directory for batch processing\n"
+              << "  --check-mode <m>   final=strict ID photo acceptance, raw=source photo precheck\n"
               << std::endl;
 }
 
@@ -93,7 +95,8 @@ std::vector<std::string> configuredCheckerNames(
     return names;
 }
 
-void runCheck(const std::string& image_path, const photo::IDPhotoStandard& standard) {
+void runCheck(const std::string& image_path, const photo::IDPhotoStandard& standard,
+              photo::CheckMode check_mode) {
     // Load image
     photo::Image img(image_path);
     if (img.empty()) {
@@ -109,6 +112,7 @@ void runCheck(const std::string& image_path, const photo::IDPhotoStandard& stand
     photo::QualityReport report;
     report.photo_type = standard.photo_type;
     report.photo_display_name = standard.display_name;
+    report.check_mode = photo::toString(check_mode);
     report.file_path = image_path;
     report.image_width = img.width();
     report.image_height = img.height();
@@ -119,13 +123,15 @@ void runCheck(const std::string& image_path, const photo::IDPhotoStandard& stand
     auto checker_names = configuredCheckerNames(standard, mgr);
 
     std::cout << "Running " << checker_names.size() << " quality checks on: "
-              << image_path << "\n\n";
+              << image_path << "\n"
+              << "Check mode: " << report.check_mode << "\n\n";
 
     for (const auto& name : checker_names) {
         auto checker = mgr.tryCreate(name);
         if (!checker) continue;
 
         auto result = checker->check(img.mat(), face, standard);
+        photo::applyCheckMode(result, check_mode);
         report.results.push_back(result);
 
         std::string status;
@@ -198,7 +204,7 @@ void runBeautify(const std::string& image_path, const std::string& effect_name,
 }
 
 void runBatch(const std::string& dir_path, const photo::IDPhotoStandard& standard,
-              const std::string& output_dir) {
+              const std::string& output_dir, photo::CheckMode check_mode) {
     if (!fs::exists(dir_path) || !fs::is_directory(dir_path)) {
         std::cerr << "Error: Not a directory: " << dir_path << std::endl;
         return;
@@ -216,6 +222,7 @@ void runBatch(const std::string& dir_path, const photo::IDPhotoStandard& standar
     }
 
     std::cout << "Found " << images.size() << " images in " << dir_path << "\n";
+    std::cout << "Check mode: " << photo::toString(check_mode) << "\n";
 
     json all_reports = json::array();
     photo::FaceAnalyzer analyzer;
@@ -238,6 +245,7 @@ void runBatch(const std::string& dir_path, const photo::IDPhotoStandard& standar
         photo::QualityReport report;
         report.photo_type = standard.photo_type;
         report.photo_display_name = standard.display_name;
+        report.check_mode = photo::toString(check_mode);
         report.file_path = img_path;
         report.image_width = img.width();
         report.image_height = img.height();
@@ -248,6 +256,7 @@ void runBatch(const std::string& dir_path, const photo::IDPhotoStandard& standar
             auto checker = mgr.tryCreate(name);
             if (!checker) continue;
             auto result = checker->check(img.mat(), face, standard);
+            photo::applyCheckMode(result, check_mode);
             report.results.push_back(result);
             if (result.passed) report.passed_checks++;
             else if (result.severity == photo::Severity::WARNING) report.warning_checks++;
@@ -311,6 +320,7 @@ int main(int argc, char* argv[]) {
     std::string param_str;
     std::string standard_path = "configs/id_card_cn.json";
     std::string output_dir;
+    std::string check_mode_value = "final";
 
     // Parse arguments
     for (int i = 1; i < argc; i++) {
@@ -336,6 +346,8 @@ int main(int argc, char* argv[]) {
             if (i + 1 < argc) standard_path = argv[++i];
         } else if (arg == "--output") {
             if (i + 1 < argc) output_dir = argv[++i];
+        } else if (arg == "--check-mode") {
+            if (i + 1 < argc) check_mode_value = argv[++i];
         } else if (arg == "--help" || arg == "-h") {
             printUsage(argv[0]);
             return 0;
@@ -343,13 +355,14 @@ int main(int argc, char* argv[]) {
     }
 
     auto standard = loadStandard(standard_path);
+    auto check_mode = photo::parseCheckMode(check_mode_value);
 
     if (mode == "check") {
         if (image_path.empty()) {
             std::cerr << "Error: --check requires an image path\n";
             return 1;
         }
-        runCheck(image_path, standard);
+        runCheck(image_path, standard, check_mode);
     } else if (mode == "beautify") {
         if (image_path.empty()) {
             std::cerr << "Error: --beautify requires an image path\n";
@@ -366,7 +379,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "Error: --batch requires a directory path\n";
             return 1;
         }
-        runBatch(image_path, standard, output_dir);
+        runBatch(image_path, standard, output_dir, check_mode);
     } else if (mode == "list-checkers") {
         listCheckers();
     } else if (mode == "list-effects") {

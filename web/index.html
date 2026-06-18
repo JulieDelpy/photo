@@ -34,6 +34,11 @@
                     <option value="drivers_license">驾驶证</option>
                     <option value="gaokao">高考照</option>
                 </select>
+                <label>检查模式:</label>
+                <select id="checkMode">
+                    <option value="final" selected>成品严检（验收/测试集）</option>
+                    <option value="raw">原图预检（拍摄源片）</option>
+                </select>
                 <button class="btn btn-success" onclick="runQualityCheck()">运行质量检查</button>
             </div>
         </section>

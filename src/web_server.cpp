@@ -2,6 +2,7 @@
 #include "photo/plugin/plugin_manager.hpp"
 #include "photo/plugin/iquality_checker.hpp"
 #include "photo/plugin/ibeauty_effect.hpp"
+#include "photo/result/check_mode.hpp"
 #include "photo/result/quality_report.hpp"
 #include <nlohmann/json.hpp>
 #include <httplib.h>
@@ -169,6 +170,14 @@ int main(int argc, char* argv[]) {
             return;
         }
 
+        std::string check_mode_raw = "final";
+        if (req.has_param("check_mode")) {
+            check_mode_raw = req.get_param_value("check_mode");
+        } else if (req.has_param("mode")) {
+            check_mode_raw = req.get_param_value("mode");
+        }
+        auto check_mode = photo::parseCheckMode(check_mode_raw);
+
         // --- Face detection ---
         photo::FaceInfo face = analyzer.detect(image);
 
@@ -176,6 +185,7 @@ int main(int argc, char* argv[]) {
         photo::QualityReport report;
         report.photo_type = standard.photo_type;
         report.photo_display_name = standard.display_name;
+        report.check_mode = photo::toString(check_mode);
         report.file_path = img_file.filename;
         report.image_width = image.cols;
         report.image_height = image.rows;
@@ -190,6 +200,7 @@ int main(int argc, char* argv[]) {
             if (!checker) continue;
 
             auto result = checker->check(image, face, standard);
+            photo::applyCheckMode(result, check_mode);
             report.results.push_back(result);
 
             if (result.passed) report.passed_checks++;

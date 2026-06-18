@@ -43,6 +43,7 @@ inline void to_json(nlohmann::json& j, const QualityReport& r) {
     j = nlohmann::json{
         {"photo_type", r.photo_type},
         {"photo_display_name", r.photo_display_name},
+        {"check_mode", r.check_mode},
         {"overall_pass", r.overall_pass},
         {"total_checks", r.total_checks},
         {"passed_checks", r.passed_checks},

@@ -164,12 +164,9 @@ function runQualityCheck() {
             showLoading(false);
         })
         .catch(err => {
-            console.warn('Backend unavailable, using demo data:', err.message);
-            setTimeout(() => {
-                const report = generateDemoReport();
-                displayResults(report);
-                showLoading(false);
-            }, 600);
+            console.warn('Backend unavailable:', err.message);
+            showLoading(false);
+            alert('后端服务不可用，请先启动 photo_web_server.exe 后再检查。');
         });
 }
 
@@ -177,6 +174,7 @@ async function checkImageViaAPI(file) {
     const formData = new FormData();
     formData.append('image', file);
     formData.append('photo_type', document.getElementById('photoType').value);
+    formData.append('check_mode', document.getElementById('checkMode')?.value || 'final');
 
     const resp = await fetch(`${apiBase}/api/v1/check`, {
         method: 'POST',
@@ -193,6 +191,7 @@ function generateDemoReport() {
     return {
         photo_type: 'id_card_cn',
         photo_display_name: '第二代居民身份证照片 (GA标准) — 演示数据',
+        check_mode: document.getElementById('checkMode')?.value || 'final',
         overall_pass: true,
         total_checks: 40,
         passed_checks: 40,
@@ -376,27 +375,28 @@ function displayResults(report) {
 
     // ---- 两级智能判定 ----
     const checks = report.results || [];
-    const hardFails    = checks.filter(c => !c.passed && c.severity === 'fail'
-                                   && HARD_BLOCK_CHECKS.includes(c.checker_name));
+    const mode = report.check_mode || document.getElementById('checkMode')?.value || 'final';
     const backendFails = checks.filter(c => !c.passed && c.severity === 'fail');
     const softAdvisory  = checks.filter(c => !c.passed && c.severity === 'warning');
-    const effectivePass = report.overall_pass !== false && hardFails.length === 0;
+    const passCount = checks.filter(c => c.passed).length;
+    const warnCount = softAdvisory.length;
+    const failCount = backendFails.length;
+    const effectivePass = failCount === 0;
 
     // ---- 摘要栏 ----
     const summaryBar = document.getElementById('summaryBar');
-    if (effectivePass && softAdvisory.length > 0) {
-        summaryBar.className = 'summary-bar pass';
-        summaryBar.innerHTML = `<strong>合格 (放行)</strong> — `
-            + `${report.passed_checks}/${report.total_checks} 核心项通过`
-            + `，${softAdvisory.length} 项边缘建议可容忍`;
+    if (effectivePass && warnCount > 0) {
+        summaryBar.className = 'summary-bar warn';
+        const title = mode === 'raw' ? '原图可进入制证' : '未硬拒绝，需优化';
+        summaryBar.innerHTML = `<strong>${title}</strong> — `
+            + `${passCount}/${checks.length} 项通过，${warnCount} 项建议优化，0 项拒绝`;
     } else if (effectivePass) {
         summaryBar.className = 'summary-bar pass';
-        summaryBar.innerHTML = `<strong>合格</strong> — `
-            + (report.summary || `${report.passed_checks}/${report.total_checks} 通过`);
+        summaryBar.innerHTML = `<strong>合格</strong> — ${passCount}/${checks.length} 项通过，0 项建议，0 项拒绝`;
     } else {
         summaryBar.className = 'summary-bar fail';
         summaryBar.innerHTML = `<strong>不合格</strong> — `
-            + `${backendFails.length || hardFails.length} 项核心指标未达标`;
+            + `${failCount} 项拒绝，${warnCount} 项建议优化，${passCount}/${checks.length} 项通过`;
     }
 
     // ---- 预览元信息 ----
@@ -405,10 +405,11 @@ function displayResults(report) {
     const fi = report.face_info;
     let metaHtml = `<div class="tag-row">
         <span class="tag face">${report.photo_display_name || report.photo_type}</span>
+        <span class="tag">${mode === 'raw' ? '原图预检' : '成品严检'}</span>
         <span class="tag">${imgW}×${imgH}</span>
-        <span class="tag">通过: ${report.passed_checks}</span>`;
-    if (report.warning_checks) metaHtml += `<span class="tag">建议: ${report.warning_checks}</span>`;
-    if (report.failed_checks) metaHtml += `<span class="tag">拒绝: ${report.failed_checks}</span>`;
+        <span class="tag">通过: ${passCount}</span>`;
+    if (warnCount) metaHtml += `<span class="tag">建议: ${warnCount}</span>`;
+    if (failCount) metaHtml += `<span class="tag">拒绝: ${failCount}</span>`;
     metaHtml += '</div>';
 
     if (fi && fi.detected) {
@@ -424,9 +425,6 @@ function displayResults(report) {
     document.getElementById('previewMeta').innerHTML = metaHtml;
 
     // ---- 统计卡片 ----
-    const passCount = checks.filter(c => c.passed).length;
-    const warnCount = checks.filter(c => !c.passed && c.severity === 'warning').length;
-    const failCount = hardFails.length;
     document.getElementById('statsRow').innerHTML = `
         <div class="stat-card pass-stat">
             <div class="stat-num">${passCount}</div>
@@ -446,7 +444,14 @@ function displayResults(report) {
     const tbody = document.getElementById('resultsBody');
     tbody.innerHTML = '';
 
-    checks.forEach(r => {
+    const severityRank = { fail: 0, warning: 1, pass: 2 };
+    const displayChecks = [...checks].sort((a, b) => {
+        const ar = a.passed ? severityRank.pass : severityRank[a.severity] ?? 3;
+        const br = b.passed ? severityRank.pass : severityRank[b.severity] ?? 3;
+        return ar - br;
+    });
+
+    displayChecks.forEach(r => {
         const cnName  = CHECKER_CN[r.checker_name] || r.checker_name;
         const cnCat   = CATEGORY_CN[r.category] || r.category;
         const passed  = r.passed;
