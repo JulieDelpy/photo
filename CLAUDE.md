@@ -185,7 +185,18 @@ REGISTER_PLUGIN(IQualityChecker, BlurChecker, "blur_check")
   - `eye_closure` v1.3.0：非对称闭合需 EAR<0.45 佐证才 FAIL
   - `mouth_open` v1.5.0：收紧 FAIL（kMarFail=0.30），新增 WARNING 中间层
 
-**11. 自动化测试恢复**
+**11. 新增 visual_defect_checker（v1.0.0）**
+- `src/quality/visual_defect_checker.cpp`（226 行）
+- 四合一可视缺陷检测：红眼（眼区 HSV 局部化红色比）、帽子/头饰（帽区彩色饱和度）、异物（面部下半区彩色+边缘密度）、划痕/扫描线（Canny+HoughLinesP 长直线）
+- score≥1.0→FAIL，≥0.65→WARNING
+
+**12. background_edge / background_texture / overexposure 升级**
+- `background_edge` v1.1.0：边缘密度>0.18→FAIL，>0.10→WARNING，消息中文化
+- `background_texture` v1.1.0：纹理方差>35→FAIL，>16→WARNING，消息中文化
+- `overexposure` v1.1.0：亮斑阈值分 warn/fail 两级，消息中文化，新增 detail 字段
+- `face_skin_tone` v1.2.0：新增 Lab 全局偏色检测，偏暖+Cb偏移>18 才判严重
+
+**13. 自动化测试恢复**
 - `tests/test_plugins.cpp` 补充 `<fstream>` 和 `face_analyzer.hpp` 头文件
 - `PHOTO_BUILD_TESTS=ON` 重新配置后 9/10 通过（1 个因工作目录跳过）
 - 运行方式：`cmake -B build -DPHOTO_BUILD_TESTS=ON && cmake --build build && cd build && ctest --output-on-failure`
