@@ -9,7 +9,7 @@ namespace photo {
 class HeadPoseChecker : public IQualityChecker {
 public:
     const char* name() const override { return "head_pose_check"; }
-    const char* version() const override { return "1.2.0"; }
+    const char* version() const override { return "1.3.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& cfg) override {
@@ -59,12 +59,16 @@ public:
         double pitch_abs = std::abs(face.pitch);
         double pm  = face.pitch_metric;
         double emr = face.eye_mouth_ratio;
+        bool chin_up_2d = (pm >= 2.35) && (face.eye_rel_y <= 0.42) && (emr >= 0.55);
         double eff_max_pitch = max_pitch;
         if (!chin_cropped && !face_squashed
+            && !chin_up_2d
             && pm >= 1.55 && pm <= 2.70 && emr >= 0.52 && emr <= 0.70)
             eff_max_pitch = 999.0;
         bool pitch_ok;
-        if (chin_cropped || face_squashed) {
+        if (chin_up_2d) {
+            pitch_ok = false;
+        } else if (chin_cropped || face_squashed) {
             pitch_ok = (pitch_abs <= max_pitch);
         } else {
             pitch_ok = (pitch_abs <= eff_max_pitch)
@@ -75,6 +79,13 @@ public:
         double max_angle = std::max({yaw_abs, pitch_abs, tilt});
         result.actual_value = max_angle;
         result.max_threshold = std::max({max_yaw, max_pitch, max_roll});
+        result.detail = "yaw=" + f(yaw_abs) + " pitch=" + f(pitch_abs)
+                      + " tilt=" + f(tilt)
+                      + " pm=" + f(pm) + " emr=" + f(emr)
+                      + " noff=" + f(nose_off)
+                      + " eye_y=" + f(face.eye_rel_y)
+                      + " chin_eye=" + f(face.chin_eye_ratio)
+                      + " chin_up=" + std::to_string(chin_up_2d ? 1 : 0);
 
         if (yaw_ok && pitch_ok && roll_ok) {
             result.passed = true;
@@ -85,10 +96,6 @@ public:
         } else {
             result.passed = false;
             result.severity = Severity::FAIL;
-            result.detail = "yaw=" + f(yaw_abs) + " pitch=" + f(pitch_abs)
-                          + " tilt=" + f(tilt)
-                          + " pm=" + f(pm) + " emr=" + f(emr)
-                          + " noff=" + f(nose_off);
             if (!yaw_ok)
                 result.message = "头部左右偏转过大 (yaw=" + f(yaw_abs)
                                + " noff=" + f(nose_off) + ")";
