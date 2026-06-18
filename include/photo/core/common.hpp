@@ -89,6 +89,7 @@ struct IDPhotoStandard {
     int max_face_count = 1;
     float min_face_confidence = 0.8f;
     float min_face_area_ratio = 0.1f;   // face_bbox_area / image_area
+    float max_face_area_ratio = 0.45f;
 
     // Face state thresholds
     float ear_min = 0.2f;               // Eye Aspect Ratio minimum
@@ -105,6 +106,7 @@ struct IDPhotoStandard {
     float max_shadow_ratio = 0.3f;
     float max_noise_stddev = 10.0f;
     int min_face_pixels = 120;
+    int max_face_pixels = 0;
 
     // Composition thresholds
     float max_center_offset_pct = 5.0f;  // percentage

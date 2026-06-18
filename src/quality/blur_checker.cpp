@@ -7,7 +7,7 @@ namespace photo {
 class BlurChecker : public IQualityChecker {
 public:
     const char* name() const override { return "blur_check"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "1.1.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& std) override {
@@ -46,8 +46,8 @@ public:
         cv::meanStdDev(laplacian, mean, stddev);
         double laplacian_var = stddev.val[0] * stddev.val[0];
 
-        // Calibrated from testset: pass=253-540, focus_blur=73, scan_noise=191
-        constexpr double kMinSharpness = 120.0;
+        // Face-only sharpness; use the configured ID-photo threshold.
+        double kMinSharpness = std.min_sharpness > 0 ? std.min_sharpness : 120.0;
 
         result.actual_value = laplacian_var;
         result.min_threshold = kMinSharpness;
@@ -56,13 +56,13 @@ public:
         if (laplacian_var < kMinSharpness) {
             result.passed = false;
             result.severity = Severity::WARNING;
-            result.message = "Face region is blurry: Laplacian var = "
+            result.message = "面部清晰度不足: Laplacian方差="
                            + std::to_string(static_cast<int>(laplacian_var))
                            + " < " + std::to_string(static_cast<int>(kMinSharpness));
         } else {
             result.passed = true;
             result.severity = Severity::PASS;
-            result.message = "Face sharpness OK: Laplacian var = "
+            result.message = "面部清晰度正常: Laplacian方差="
                            + std::to_string(static_cast<int>(laplacian_var));
         }
         return result;

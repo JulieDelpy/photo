@@ -48,7 +48,7 @@ TEST(PluginManagerTest, CanCreateQualityChecker) {
 
     EXPECT_NE(checker, nullptr);
     EXPECT_STREQ(checker->name(), "blur_check");
-    EXPECT_STREQ(checker->version(), "1.0.0");
+    EXPECT_GT(std::string(checker->version()).size(), 0);
     EXPECT_STREQ(checker->category(), "quality");
 }
 

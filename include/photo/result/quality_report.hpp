@@ -83,6 +83,7 @@ inline void from_json(const nlohmann::json& j, IDPhotoStandard& s) {
         if (fd.contains("max_face_count")) fd.at("max_face_count").get_to(s.max_face_count);
         if (fd.contains("min_confidence")) fd.at("min_confidence").get_to(s.min_face_confidence);
         if (fd.contains("min_face_area_ratio")) fd.at("min_face_area_ratio").get_to(s.min_face_area_ratio);
+        if (fd.contains("max_face_area_ratio")) fd.at("max_face_area_ratio").get_to(s.max_face_area_ratio);
     }
 
     if (j.contains("face_state")) {
@@ -103,6 +104,7 @@ inline void from_json(const nlohmann::json& j, IDPhotoStandard& s) {
         if (q.contains("max_shadow_ratio")) q.at("max_shadow_ratio").get_to(s.max_shadow_ratio);
         if (q.contains("max_noise_stddev")) q.at("max_noise_stddev").get_to(s.max_noise_stddev);
         if (q.contains("min_face_pixels")) q.at("min_face_pixels").get_to(s.min_face_pixels);
+        if (q.contains("max_face_pixels")) q.at("max_face_pixels").get_to(s.max_face_pixels);
     }
 
     if (j.contains("composition")) {

@@ -7,7 +7,7 @@ namespace photo {
 class FaceOcclusionChecker : public IQualityChecker {
 public:
     const char* name() const override { return "face_occlusion_check"; }
-    const char* version() const override { return "1.1.0"; }
+    const char* version() const override { return "1.2.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard&) override {
@@ -116,34 +116,34 @@ public:
         double brow_asymmetry = std::abs(brow_ratio_l - brow_ratio_r);
         constexpr double kAsymmetryThreshold = 0.25;
         constexpr double kDarkThreshold = 0.50;
-        constexpr double kEdgeDensityThreshold = 0.08;  // 眼区边缘占比 > 8%
+        constexpr double kEdgeDensityThreshold = 0.08;  // diagnostic only
 
         bool brow_dark = (brow_ratio < kDarkThreshold);
         bool lid_dark  = (lid_ratio < kDarkThreshold);
         bool asymmetric = (brow_asymmetry > kAsymmetryThreshold);
-        bool high_edge  = (avg_edge_density > kEdgeDensityThreshold);
+        (void)kEdgeDensityThreshold;
 
         result.actual_value = brow_ratio;
         result.max_threshold = kDarkThreshold;
+        result.detail = "brow_l=" + std::to_string(brow_ratio_l)
+                      + " brow_r=" + std::to_string(brow_ratio_r)
+                      + " brow_min=" + std::to_string(brow_ratio)
+                      + " fore_min=" + std::to_string(fore_ratio)
+                      + " lid_min=" + std::to_string(lid_ratio)
+                      + " brow_asym=" + std::to_string(brow_asymmetry)
+                      + " eye_edge=" + std::to_string(avg_edge_density);
 
         // 判断逻辑：
-        // - 眉区亮 + 眼睑亮 + 低边缘 → 正常 PASS
-        // - 眉区亮 + 高边缘密度 → 眼镜/镜框遮挡 WARNING
+        // - 眉区亮 + 眼睑亮 → 正常 PASS；眼区边缘密集只作为诊断，不等同遮挡
         // - 眉区亮 + 眼睑暗 → 可能眼镜/眼部遮挡 WARNING
-        // - 眉区暗 + 左右不对称 → 单侧头发遮挡 FAIL
+        // - 眉区暗 + 左右不对称 → 可能头发/阴影影响 WARNING
         // - 眉区暗 + 眼睑暗 → 头发遮到眼区 FAIL
         // - 眉区暗 + 对称 + 眼睑亮 → 正常刘海 PASS
-        if (!brow_dark && !lid_dark && !high_edge) {
+        if (!brow_dark && !lid_dark) {
             result.passed = true;
             result.severity = Severity::PASS;
             result.message = "面部无遮挡: 眉区亮度="
                            + std::to_string(static_cast<int>(brow_ratio * 100)) + "%";
-        } else if (!brow_dark && high_edge) {
-            result.passed = false;
-            result.severity = Severity::WARNING;
-            result.message = "眼部区域边缘密集(可能眼镜/镜框): 眉区="
-                           + std::to_string(static_cast<int>(brow_ratio * 100))
-                           + "% 边缘密度=" + std::to_string(static_cast<int>(avg_edge_density * 100)) + "%";
         } else if (!brow_dark && lid_dark) {
             result.passed = false;
             result.severity = Severity::WARNING;
@@ -152,8 +152,8 @@ public:
                            + "% 眼睑=" + std::to_string(static_cast<int>(lid_ratio * 100)) + "%";
         } else if (asymmetric) {
             result.passed = false;
-            result.severity = Severity::FAIL;
-            result.message = "单侧眉毛被头发遮挡: 左眉="
+            result.severity = Severity::WARNING;
+            result.message = "眉区单侧偏暗(可能阴影/头发影响): 左眉="
                            + std::to_string(static_cast<int>(brow_ratio_l * 100))
                            + "% 右眉=" + std::to_string(static_cast<int>(brow_ratio_r * 100))
                            + "% 差异=" + std::to_string(static_cast<int>(brow_asymmetry * 100)) + "%";
