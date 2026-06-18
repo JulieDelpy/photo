@@ -150,7 +150,21 @@ REGISTER_PLUGIN(IQualityChecker, BlurChecker, "blur_check")
 - `src/beauty/face_slimming.cpp:228-229`
 - remap 采样坐标从 `+ offset` 改为 `- offset`，瘦脸效果现在正确向内收缩而非向外扩张
 
-**6. 自动化测试恢复**
+**6. head_pose 抬头检测增强（v1.3.0）**
+- `src/quality/head_pose_checker.cpp:12`
+- 新增 2D 抬头判定：`pm >= 2.35 && eye_rel_y <= 0.42 && emr >= 0.55`
+- 命中则直接 pitch_ok=false（硬阻断），不依赖 pitch 角度
+- 避免 `pass/12-1.jpg` 这类高 pm 但不像抬头的正常样例被误杀
+- detail 字段扩充：追加 eye_y、chin_eye、chin_up 标志位
+
+**7. mouth_open 低 MAR 露齿检测（v1.4.0）**
+- `src/quality/mouth_open_checker.cpp:10`
+- 新增低 MAR 区间（0.045 < MAR < 0.13）的牙齿检测：V>180, S<85 判为露牙 FAIL
+- 新增牙齿像素计数：口腔 ROI（landmarks 48-67 外扩）逐像素统计 V>175, S<85
+- detail 字段扩充：oral_v、oral_s、teeth_px、teeth_ratio、low_mar_teeth 标志位
+- 测试集硬缺陷漏判从 3/18 降至 1/18
+
+**8. 自动化测试恢复**
 - `tests/test_plugins.cpp` 补充 `<fstream>` 和 `face_analyzer.hpp` 头文件
 - `PHOTO_BUILD_TESTS=ON` 重新配置后 9/10 通过（1 个因工作目录跳过）
 - 运行方式：`cmake -B build -DPHOTO_BUILD_TESTS=ON && cmake --build build && cd build && ctest --output-on-failure`
