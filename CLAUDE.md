@@ -145,3 +145,27 @@ REGISTER_PLUGIN(IQualityChecker, BlurChecker, "blur_check")
 - `web/js/app.js:253`
 - `HARD_BLOCK_CHECKS` 移除 `border_check`
 - 失败摘要改用后端返回的 `failed_checks` 真实计数，消除"0 项核心未达标但不合格"的 UI 矛盾
+
+**5. face_slimming 方向修复（v3.2.1）**
+- `src/beauty/face_slimming.cpp:228-229`
+- remap 采样坐标从 `+ offset` 改为 `- offset`，瘦脸效果现在正确向内收缩而非向外扩张
+
+**6. 自动化测试恢复**
+- `tests/test_plugins.cpp` 补充 `<fstream>` 和 `face_analyzer.hpp` 头文件
+- `PHOTO_BUILD_TESTS=ON` 重新配置后 9/10 通过（1 个因工作目录跳过）
+- 运行方式：`cmake -B build -DPHOTO_BUILD_TESTS=ON && cmake --build build && cd build && ctest --output-on-failure`
+
+### 闭眼检测双信号策略（验收口径）
+
+`eye_closure_checker` 采用纹理方差 + EAR 双信号判定：
+
+| 纹理方差 (< 400) | EAR (< 0.20) | 结果 | 含义 |
+|:-:|:-:|:--|------|
+| ✓ | ✓ | **FAIL** | 双信号一致，明确闭眼 |
+| ✓ | ✗ | **WARNING** | 纹理低但眼裂正常，疑似小眼/眼镜/低分辨率/landmark 漂移 |
+| ✗ | ✓ | **WARNING** | 眼裂偏窄但纹理正常 |
+| ✗ | ✗ | **PASS** | 双眼睁开正常 |
+
+**设计原则**：证件照质检中，误杀小眼/眼镜/低分辨率/landmark 漂移的代价 > 漏掉边缘闭眼样例。边缘样例进入 WARNING 层级提示人工复核，而非硬阻断。
+
+**已知边缘样例**：`testset/eyes_closed/5-3.jpg` 预期 WARNING（纹理低但 EAR=0.66 正常），不是 FAIL。
