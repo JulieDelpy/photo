@@ -164,22 +164,38 @@ REGISTER_PLUGIN(IQualityChecker, BlurChecker, "blur_check")
 - detail 字段扩充：oral_v、oral_s、teeth_px、teeth_ratio、low_mar_teeth 标志位
 - 测试集硬缺陷漏判从 3/18 降至 1/18
 
-**8. 自动化测试恢复**
+**8. eye_closure 非对称单侧闭合检测（v1.2.0）**
+- `src/quality/eye_closure_checker.cpp:9`
+- 新增非对称规则：一侧眼区纹理极低 (`min_var < 320`) + 另一侧仍有有效纹理 (`max_var > 800`) → FAIL
+- 捕捉 LBF landmark 把眼裂算错时的明显闭眼/单侧闭合（如 5-3.jpg EAR=0.66 仍被正确拦截）
+- 彩色眼镜/粗框眼镜不会被误杀（双眼都低纹理时 max_var 不超 800，规则不触发）
+- detail 字段扩充：left_var、right_var、asymmetric_closed 标志位
+- 测试集硬缺陷漏判：**0/18**，pass/ 硬失败：0/11
+
+**9. 自动化测试恢复**
 - `tests/test_plugins.cpp` 补充 `<fstream>` 和 `face_analyzer.hpp` 头文件
 - `PHOTO_BUILD_TESTS=ON` 重新配置后 9/10 通过（1 个因工作目录跳过）
 - 运行方式：`cmake -B build -DPHOTO_BUILD_TESTS=ON && cmake --build build && cd build && ctest --output-on-failure`
 
-### 闭眼检测双信号策略（验收口径）
+### 闭眼检测判定策略（验收口径）
 
-`eye_closure_checker` 采用纹理方差 + EAR 双信号判定：
+`eye_closure_checker` v1.2.0 采用三层判定：
 
-| 纹理方差 (< 400) | EAR (< 0.20) | 结果 | 含义 |
-|:-:|:-:|:--|------|
-| ✓ | ✓ | **FAIL** | 双信号一致，明确闭眼 |
-| ✓ | ✗ | **WARNING** | 纹理低但眼裂正常，疑似小眼/眼镜/低分辨率/landmark 漂移 |
-| ✗ | ✓ | **WARNING** | 眼裂偏窄但纹理正常 |
-| ✗ | ✗ | **PASS** | 双眼睁开正常 |
+**规则 1 — 双信号一致（纹理 + EAR）**
+| 纹理方差 (min < 400) | EAR (< 0.20) | 结果 |
+|:-:|:-:|:--|
+| ✓ | ✓ | **FAIL** |
+| ✓ | ✗ | **WARNING** |
+| ✗ | ✓ | **WARNING** |
+| ✗ | ✗ | PASS |
 
-**设计原则**：证件照质检中，误杀小眼/眼镜/低分辨率/landmark 漂移的代价 > 漏掉边缘闭眼样例。边缘样例进入 WARNING 层级提示人工复核，而非硬阻断。
+**规则 2 — 非对称单侧闭合（像素级）**
+| 一侧纹理 (< 320) | 对侧纹理 (> 800) | 结果 |
+|:-:|:-:|:--|
+| ✓ | ✓ | **FAIL**（捕捉 LBF landmark 误算 EAR 时的闭眼） |
 
-**已知边缘样例**：`testset/eyes_closed/5-3.jpg` 预期 WARNING（纹理低但 EAR=0.66 正常），不是 FAIL。
+两条规则任一命中即 FAIL。规则 2 不触发彩色/粗框眼镜（双眼都低纹理 → max_var < 800）。
+
+**设计原则**：误杀小眼/眼镜/低分辨率/landmark 漂移的代价 > 漏掉边缘闭眼样例。
+
+**当前指标**：硬缺陷漏判 0/18，pass/ 硬失败 0/11。
