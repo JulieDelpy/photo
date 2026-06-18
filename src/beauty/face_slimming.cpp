@@ -14,7 +14,7 @@ inline float smoothstep(float t) {
 class FaceSlimmingEffect : public IBeautyEffect {
 public:
     const char* name() const override { return "face_slimming"; }
-    const char* version() const override { return "3.2.0"; }
+    const char* version() const override { return "3.2.1"; }
 
     std::map<std::string, ParamDef> defaultParams() const override {
         return {
@@ -213,7 +213,9 @@ public:
                          0, 0, cv::BORDER_REFLECT);
 
         // ============================================================
-        // 5. 从平滑后的位移场构建 remap 映射矩阵
+        // 5. 从平滑后的前向位移场构建 remap 采样矩阵
+        //    offset 表示脸部轮廓希望移动的方向；remap 需要的是
+        //    目标像素从源图哪里采样，所以符号必须取反。
         // ============================================================
         cv::Mat map_x(roi.size(), CV_32F);
         cv::Mat map_y(roi.size(), CV_32F);
@@ -226,8 +228,8 @@ public:
             float  gy     = static_cast<float>(y + roi.y);
 
             for (int x = 0; x < roi.width; ++x) {
-                mx_row[x] = static_cast<float>(x + roi.x) + ox_row[x];
-                my_row[x] = gy + oy_row[x];
+                mx_row[x] = static_cast<float>(x + roi.x) - ox_row[x];
+                my_row[x] = gy - oy_row[x];
             }
         }
 
