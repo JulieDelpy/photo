@@ -40,6 +40,7 @@ add_library(photo_quality OBJECT
     src/quality/noise_checker.cpp
     src/quality/resolution_checker.cpp
     src/quality/overexposure_checker.cpp
+    src/quality/visual_defect_checker.cpp
     src/quality/underexposure_checker.cpp
     src/quality/sharpness_checker.cpp
     src/quality/jpeg_artifact_checker.cpp

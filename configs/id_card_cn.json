@@ -71,6 +71,7 @@
     "noise_check",
     "resolution_check",
     "overexposure_check",
+    "visual_defect_check",
     "underexposure_check",
     "sharpness_check",
     "jpeg_artifact_check",

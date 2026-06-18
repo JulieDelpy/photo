@@ -1,13 +1,14 @@
 #include "photo/plugin/iquality_checker.hpp"
 #include "photo/plugin/plugin_macros.hpp"
 #include <opencv2/imgproc.hpp>
+#include <cmath>
 
 namespace photo {
 
 class FaceSkinToneChecker : public IQualityChecker {
 public:
     const char* name() const override { return "face_skin_tone_check"; }
-    const char* version() const override { return "1.1.0"; }
+    const char* version() const override { return "1.2.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard&) override {
@@ -62,6 +63,7 @@ public:
         constexpr double kCbMax = 130.0;
         constexpr double kCrCbRatioWarnMax = 1.45;
         constexpr double kCrCbRatioFailMax = 1.60;
+        constexpr double kGlobalCastFailDist = 18.0;
         constexpr double kCrSdWarnMax = 25.0;
         constexpr double kCbSdWarnMax = 20.0;
         constexpr double kCrSdFailMax = 35.0;
@@ -72,11 +74,22 @@ public:
         bool ratio_ok = (cr_cb_ratio <= kCrCbRatioWarnMax);
         bool cr_sd_ok = (cr_sd <= kCrSdWarnMax);
         bool cb_sd_ok = (cb_sd <= kCbSdWarnMax);
+        double global_cast_dist = 0.0;
+        if (image.channels() == 3) {
+            cv::Mat lab;
+            cv::cvtColor(image, lab, cv::COLOR_BGR2Lab);
+            cv::Scalar lab_mean = cv::mean(lab);
+            double a_dev = lab_mean[1] - 128.0;
+            double b_dev = lab_mean[2] - 128.0;
+            global_cast_dist = std::sqrt(a_dev * a_dev + b_dev * b_dev);
+        }
+
         bool severe = (cr < kCrMin - 10.0) || (cr > kCrMax + 10.0)
                    || (cb < kCbMin - 10.0) || (cb > kCbMax + 10.0)
                    || (cr_cb_ratio > kCrCbRatioFailMax)
                    || (cr_sd > kCrSdFailMax)
-                   || (cb_sd > kCbSdFailMax);
+                   || (cb_sd > kCbSdFailMax)
+                   || (cr_cb_ratio > kCrCbRatioWarnMax && global_cast_dist > kGlobalCastFailDist);
 
         result.actual_value = cr;
         result.min_threshold = kCrMin;
@@ -85,7 +98,8 @@ public:
                       + " Cb=" + std::to_string(static_cast<int>(cb))
                       + " CrCb=" + std::to_string(cr_cb_ratio).substr(0, 4)
                       + " CrSD=" + std::to_string(static_cast<int>(cr_sd))
-                      + " CbSD=" + std::to_string(static_cast<int>(cb_sd));
+                      + " CbSD=" + std::to_string(static_cast<int>(cb_sd))
+                      + " global_cast=" + std::to_string(global_cast_dist).substr(0, 4);
 
         if (cr_ok && cb_ok && ratio_ok && cr_sd_ok && cb_sd_ok) {
             result.passed = true;

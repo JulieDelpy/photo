@@ -7,7 +7,7 @@ namespace photo {
 class BackgroundTextureChecker : public IQualityChecker {
 public:
     const char* name() const override { return "background_texture_check"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "1.1.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard&) override {
@@ -62,18 +62,24 @@ public:
 
         double texture = texture_sum / count;
         result.actual_value = texture;
-        constexpr double kBgTextureMax = 16.0;
-        result.max_threshold = kBgTextureMax;
+        constexpr double kBgTextureWarn = 16.0;
+        constexpr double kBgTextureFail = 35.0;
+        result.max_threshold = kBgTextureWarn;
 
-        if (texture > kBgTextureMax) {
+        if (texture > kBgTextureFail) {
+            result.passed = false;
+            result.severity = Severity::FAIL;
+            result.message = "背景存在明显纹理/杂物: 梯度="
+                           + std::to_string(static_cast<int>(texture));
+        } else if (texture > kBgTextureWarn) {
             result.passed = false;
             result.severity = Severity::WARNING;
-            result.message = "Background has visible texture/pattern: LBP variance = "
+            result.message = "背景纹理偏明显: 梯度="
                            + std::to_string(static_cast<int>(texture));
         } else {
             result.passed = true;
             result.severity = Severity::PASS;
-            result.message = "Background texture minimal: variance = "
+            result.message = "背景纹理正常: 梯度="
                            + std::to_string(static_cast<int>(texture));
         }
         return result;

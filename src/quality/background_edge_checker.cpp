@@ -7,7 +7,7 @@ namespace photo {
 class BackgroundEdgeChecker : public IQualityChecker {
 public:
     const char* name() const override { return "background_edge_check"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "1.1.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& std) override {
@@ -58,19 +58,25 @@ public:
 
         double density = static_cast<double>(edge_pixels) / total_pixels;
 
-        constexpr double kBgEdgeDensityMax = 0.10;
+        constexpr double kBgEdgeDensityWarn = 0.10;
+        constexpr double kBgEdgeDensityFail = 0.18;
         result.actual_value = density;
-        result.max_threshold = kBgEdgeDensityMax;
+        result.max_threshold = kBgEdgeDensityWarn;
 
-        if (density > kBgEdgeDensityMax) {
+        if (density > kBgEdgeDensityFail) {
+            result.passed = false;
+            result.severity = Severity::FAIL;
+            result.message = "背景存在明显边缘/杂物: 密度="
+                           + std::to_string(static_cast<int>(density * 100)) + "%";
+        } else if (density > kBgEdgeDensityWarn) {
             result.passed = false;
             result.severity = Severity::WARNING;
-            result.message = "Background has too many edges/objects: density = "
+            result.message = "背景边缘偏多: 密度="
                            + std::to_string(static_cast<int>(density * 100)) + "%";
         } else {
             result.passed = true;
             result.severity = Severity::PASS;
-            result.message = "Background edge density OK: "
+            result.message = "背景边缘正常: "
                            + std::to_string(static_cast<int>(density * 100)) + "%";
         }
         return result;

@@ -20,6 +20,7 @@ debug/
 datateset/
 doc_output.txt
 *.docx
+!项目验收报告.docx
 # Large model files — download separately
 models/lbfmodel.yaml
 # Generated reports

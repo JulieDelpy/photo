@@ -24,6 +24,7 @@ const CHECKER_CN = {
     noise_check:              '面部噪点',
     resolution_check:         '人脸分辨率',
     overexposure_check:       '过曝检测',
+    visual_defect_check:      '可视缺陷',
     underexposure_check:      '欠曝检测',
     sharpness_check:          '整体清晰度',
     jpeg_artifact_check:      'JPEG 伪影',
@@ -191,8 +192,8 @@ function generateDemoReport() {
         photo_type: 'id_card_cn',
         photo_display_name: '第二代居民身份证照片 (GA标准) — 演示数据',
         overall_pass: true,
-        total_checks: 40,
-        passed_checks: 40,
+        total_checks: 41,
+        passed_checks: 41,
         failed_checks: 0,
         warning_checks: 0,
         face_info: {
@@ -223,6 +224,7 @@ function generateDemoReport() {
             { checker_name:'image_noise_check',        category:'quality',     passed:true, severity:'pass', actual_value:5.3,    min_threshold:0,   max_threshold:9.0,  message:'整图噪点可接受' },
             { checker_name:'jpeg_artifact_check',      category:'quality',     passed:true, severity:'pass', actual_value:1.04,   min_threshold:0,   max_threshold:2.0,  message:'无明显JPEG伪影' },
             { checker_name:'overexposure_check',       category:'quality',     passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:0.05, message:'无显著过曝' },
+            { checker_name:'visual_defect_check',      category:'quality',     passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:1,    message:'未发现明显红眼/遮挡/划痕' },
             { checker_name:'underexposure_check',      category:'quality',     passed:true, severity:'pass', actual_value:0,      min_threshold:0,   max_threshold:0.05, message:'无显著欠曝' },
             { checker_name:'head_margin_check',        category:'composition',  passed:true, severity:'pass', actual_value:15,     min_threshold:7,   max_threshold:21,   message:'头顶边距OK: 15px' },
             { checker_name:'chin_margin_check',        category:'composition',  passed:true, severity:'pass', actual_value:20,     min_threshold:7,   max_threshold:0,    message:'下巴边距OK: 20px' },
@@ -240,7 +242,7 @@ function generateDemoReport() {
             { checker_name:'color_space_check',        category:'file',         passed:true, severity:'pass', actual_value:3,      min_threshold:0,   max_threshold:0,    message:'色彩空间: RGB' },
             { checker_name:'dpi_check',                category:'file',         passed:true, severity:'pass', actual_value:350,    min_threshold:350, max_threshold:350,  message:'DPI: 350' },
         ],
-        summary: '40/40 通过',
+        summary: '41/41 通过',
         file_info: { path: '', width: 358, height: 441, file_size_bytes: 18432, format: 'JPEG' }
     };
 }
@@ -253,7 +255,8 @@ const HARD_BLOCK_CHECKS = [
     'head_margin_check', 'centering_check',
     'face_size_check',
     'face_skin_tone_check', 'face_occlusion_check',
-    'background_color_check', 'overexposure_check'
+    'background_color_check', 'overexposure_check', 'visual_defect_check',
+    'background_texture_check', 'background_edge_check'
 ];
 
 // ========================
@@ -310,6 +313,8 @@ function makeMessageCN(checkerName, passed, severity, actual, minVal, maxVal, ra
             return passed ? `人脸分辨率充足: ${av} 像素` : `人脸分辨率不足: ${av} 像素（要求${minVal}-${maxVal}）`;
         case 'overexposure_check':
             return passed ? '无显著过曝区域' : rawMsg || `面部过曝: ${av}（阈值${maxVal}）`;
+        case 'visual_defect_check':
+            return passed ? '未发现明显红眼/遮挡/划痕' : rawMsg || '检测到明显可视缺陷';
         case 'underexposure_check':
             return passed ? '无显著欠曝区域' : rawMsg || `面部欠曝: ${av}（阈值${maxVal}）`;
         case 'sharpness_check':
