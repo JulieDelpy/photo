@@ -73,6 +73,26 @@ photo::ParamMap parseParams(const std::string& param_str) {
     return params;
 }
 
+std::vector<std::string> configuredCheckerNames(
+    const photo::IDPhotoStandard& standard,
+    const photo::PluginManager<photo::IQualityChecker>& mgr) {
+    if (standard.checks.empty()) {
+        return mgr.availablePlugins();
+    }
+
+    std::vector<std::string> names;
+    names.reserve(standard.checks.size());
+    for (const auto& name : standard.checks) {
+        if (mgr.hasPlugin(name)) {
+            names.push_back(name);
+        } else {
+            std::cerr << "Warning: configured checker not registered: "
+                      << name << "\n";
+        }
+    }
+    return names;
+}
+
 void runCheck(const std::string& image_path, const photo::IDPhotoStandard& standard) {
     // Load image
     photo::Image img(image_path);
@@ -85,7 +105,7 @@ void runCheck(const std::string& image_path, const photo::IDPhotoStandard& stand
     photo::FaceAnalyzer analyzer;
     photo::FaceInfo face = analyzer.detect(img.mat());
 
-    // Run all registered quality checkers
+    // Run configured quality checkers in config order.
     photo::QualityReport report;
     report.photo_type = standard.photo_type;
     report.photo_display_name = standard.display_name;
@@ -96,13 +116,13 @@ void runCheck(const std::string& image_path, const photo::IDPhotoStandard& stand
     report.face_info = face;
 
     auto& mgr = photo::PluginManager<photo::IQualityChecker>::instance();
-    auto checker_names = mgr.availablePlugins();
+    auto checker_names = configuredCheckerNames(standard, mgr);
 
     std::cout << "Running " << checker_names.size() << " quality checks on: "
               << image_path << "\n\n";
 
     for (const auto& name : checker_names) {
-        auto checker = mgr.create(name);
+        auto checker = mgr.tryCreate(name);
         if (!checker) continue;
 
         auto result = checker->check(img.mat(), face, standard);
@@ -140,6 +160,18 @@ void runCheck(const std::string& image_path, const photo::IDPhotoStandard& stand
 
 void runBeautify(const std::string& image_path, const std::string& effect_name,
                  const photo::ParamMap& params, const photo::IDPhotoStandard&) {
+    auto& mgr = photo::PluginManager<photo::IBeautyEffect>::instance();
+    auto effect = mgr.tryCreate(effect_name);
+    if (!effect) {
+        std::cerr << "Error: Unknown effect '" << effect_name << "'\n";
+        std::cerr << "Available: ";
+        for (const auto& n : mgr.availablePlugins()) {
+            std::cerr << n << " ";
+        }
+        std::cerr << std::endl;
+        return;
+    }
+
     photo::Image img(image_path);
     if (img.empty()) {
         std::cerr << "Error: Cannot load image: " << image_path << std::endl;
@@ -155,18 +187,6 @@ void runBeautify(const std::string& image_path, const std::string& effect_name,
     }
 
     // Apply beauty effect
-    auto& mgr = photo::PluginManager<photo::IBeautyEffect>::instance();
-    auto effect = mgr.create(effect_name);
-    if (!effect) {
-        std::cerr << "Error: Unknown effect '" << effect_name << "'\n";
-        std::cerr << "Available: ";
-        for (const auto& n : mgr.availablePlugins()) {
-            std::cerr << n << " ";
-        }
-        std::cerr << std::endl;
-        return;
-    }
-
     std::cout << "Applying effect '" << effect_name << "'...\n";
     if (effect->apply(img.mat(), face, params)) {
         std::string out_path = image_path + ".beautified.jpg";
@@ -200,7 +220,7 @@ void runBatch(const std::string& dir_path, const photo::IDPhotoStandard& standar
     json all_reports = json::array();
     photo::FaceAnalyzer analyzer;
     auto& mgr = photo::PluginManager<photo::IQualityChecker>::instance();
-    auto checker_names = mgr.availablePlugins();
+    auto checker_names = configuredCheckerNames(standard, mgr);
 
     for (size_t i = 0; i < images.size(); i++) {
         const auto& img_path = images[i];
@@ -225,7 +245,7 @@ void runBatch(const std::string& dir_path, const photo::IDPhotoStandard& standar
         report.face_info = face;
 
         for (const auto& name : checker_names) {
-            auto checker = mgr.create(name);
+            auto checker = mgr.tryCreate(name);
             if (!checker) continue;
             auto result = checker->check(img.mat(), face, standard);
             report.results.push_back(result);

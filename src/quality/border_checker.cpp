@@ -103,7 +103,7 @@ public:
 
         if (shadow_sides >= 1) {
             result.passed = false;
-            result.severity = Severity::FAIL;
+            result.severity = Severity::WARNING;
             result.message = "背景边缘存在阴影/不均: " + sides
                            + "侧 差值=" + std::to_string(static_cast<int>(max_diff));
         } else {

@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <mutex>
 
@@ -32,6 +33,26 @@ photo::IDPhotoStandard loadStandard(const std::string& path) {
     json j;
     f >> j;
     return j.get<photo::IDPhotoStandard>();
+}
+
+std::vector<std::string> configuredCheckerNames(
+    const photo::IDPhotoStandard& standard,
+    const photo::PluginManager<photo::IQualityChecker>& mgr) {
+    if (standard.checks.empty()) {
+        return mgr.availablePlugins();
+    }
+
+    std::vector<std::string> names;
+    names.reserve(standard.checks.size());
+    for (const auto& name : standard.checks) {
+        if (mgr.hasPlugin(name)) {
+            names.push_back(name);
+        } else {
+            std::cerr << "[web_server] WARNING: configured checker not registered: "
+                      << name << "\n";
+        }
+    }
+    return names;
 }
 
 // ============================================================
@@ -162,10 +183,10 @@ int main(int argc, char* argv[]) {
         report.face_info = face;
 
         auto& mgr = photo::PluginManager<photo::IQualityChecker>::instance();
-        auto checker_names = mgr.availablePlugins();
+        auto checker_names = configuredCheckerNames(standard, mgr);
 
         for (const auto& name : checker_names) {
-            auto checker = mgr.create(name);
+            auto checker = mgr.tryCreate(name);
             if (!checker) continue;
 
             auto result = checker->check(image, face, standard);
@@ -279,6 +300,16 @@ int main(int argc, char* argv[]) {
             return;
         }
 
+        auto& beautyMgr = photo::PluginManager<photo::IBeautyEffect>::instance();
+        for (const auto& step : steps) {
+            if (!beautyMgr.hasPlugin(step.name)) {
+                res.status = 400;
+                std::string err = R"({"error":"unknown effect: ')" + step.name + "'\"}";
+                res.set_content(err, "application/json");
+                return;
+            }
+        }
+
         // --- 人脸检测（仅一次，所有效果共享） ---
         photo::FaceInfo face = analyzer.detect(image);
         if (!face.detected) {
@@ -288,9 +319,8 @@ int main(int argc, char* argv[]) {
         }
 
         // --- 按顺序叠加应用所有效果 ---
-        auto& beautyMgr = photo::PluginManager<photo::IBeautyEffect>::instance();
         for (auto& step : steps) {
-            auto effect = beautyMgr.create(step.name);
+            auto effect = beautyMgr.tryCreate(step.name);
             if (!effect) {
                 res.status = 400;
                 std::string err = R"({"error":"unknown effect: ')" + step.name + "'\"}";

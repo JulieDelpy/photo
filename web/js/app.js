@@ -256,8 +256,7 @@ const HARD_BLOCK_CHECKS = [
     'head_margin_check', 'centering_check',
     'face_size_check',
     'face_skin_tone_check', 'face_occlusion_check',
-    'background_color_check', 'overexposure_check',
-    'border_check'
+    'background_color_check', 'overexposure_check'
 ];
 
 // ========================
@@ -379,6 +378,7 @@ function displayResults(report) {
     const checks = report.results || [];
     const hardFails    = checks.filter(c => !c.passed && c.severity === 'fail'
                                    && HARD_BLOCK_CHECKS.includes(c.checker_name));
+    const backendFails = checks.filter(c => !c.passed && c.severity === 'fail');
     const softAdvisory  = checks.filter(c => !c.passed && c.severity === 'warning');
     const effectivePass = report.overall_pass !== false && hardFails.length === 0;
 
@@ -396,7 +396,7 @@ function displayResults(report) {
     } else {
         summaryBar.className = 'summary-bar fail';
         summaryBar.innerHTML = `<strong>不合格</strong> — `
-            + `${hardFails.length} 项核心指标未达标`;
+            + `${backendFails.length || hardFails.length} 项核心指标未达标`;
     }
 
     // ---- 预览元信息 ----
