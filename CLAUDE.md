@@ -121,3 +121,27 @@ REGISTER_PLUGIN(IQualityChecker, BlurChecker, "blur_check")
 2. `CMakeLists.txt` — 在 `photo_quality` OBJECT library 中添加 .cpp
 3. `configs/id_card_cn.json` — 在 `checks` 数组中添加名称
 4. `web/js/app.js` — 在 `CHECKER_CN` 中添加中文名，在 `makeMessageCN()` 的 switch 中添加中文消息模板
+
+## 最近变更
+
+### 2026-06-18：稳健性优化
+
+**1. Checker 执行顺序改为按配置文件**
+- `src/cli/main.cpp:76` / `src/web_server.cpp:38`
+- 之前：跑 PluginManager 的全量注册 checker（字母序），忽略配置
+- 现在：按 `configs/id_card_cn.json` 的 `checks` 数组顺序执行
+- 如果配置中写了未注册的 checker 名，输出 warning 而非静默跳过
+
+**2. 美颜 effect 前置校验**
+- `src/cli/main.cpp:164` / `src/web_server.cpp:303`
+- 之前：先加载 YuNet/LBF 模型、跑人脸检测，才发现 effect 名无效
+- 现在：先校验 effect 名称，未知 effect 立即返回 400 / 可用列表，节省模型加载开销
+
+**3. border_check 从 FAIL 降为 WARNING**
+- `src/quality/border_checker.cpp:106`
+- 边缘阴影判 FAIL 过于严格，改为 WARNING 符合"非核心 checker 不硬阻断"规则
+
+**4. 前端硬阻断名单同步**
+- `web/js/app.js:253`
+- `HARD_BLOCK_CHECKS` 移除 `border_check`
+- 失败摘要改用后端返回的 `failed_checks` 真实计数，消除"0 项核心未达标但不合格"的 UI 矛盾
