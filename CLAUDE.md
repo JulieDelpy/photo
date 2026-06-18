@@ -176,12 +176,14 @@ REGISTER_PLUGIN(IQualityChecker, BlurChecker, "blur_check")
 - `src/quality/head_pose_checker.cpp:38`
 - solvePnP yaw 不可靠时（`yaw>90°` 且 nose_off≤0.20），仅信任鼻尖偏移比，避免极端角度误判
 
-**10. CheckMode 双模式系统（RAW/FINAL）**
-- `include/photo/result/check_mode.hpp` — 新文件，核心逻辑
-- FINAL（默认）：成品严格验收，所有 checker 正常判定
-- RAW：原片预检，5 个可后期修复的 checker（face_size、centering、head_margin、background_color、face_skin_tone）从 FAIL 降为 WARNING
-- CLI：`--check-mode raw|final`，API：`?check_mode=raw|final`
-- 前端：模式下拉框，结果按严重度排序，摘要栏区分"成品严检"/"原图预检"
+**10. CheckMode 移除 + 改用 checker 内置上下文感知**
+- 全局 `check_mode.hpp` RAW/FINAL 双模式已删除，前端模式下拉框同步移除
+- 替代方案：每个 checker 根据自身上下文自判严重度
+  - `face_size` v2.2.0：图像尺寸匹配目标时才 FAIL，否则 WARNING
+  - `head_pose` v1.4.0：抬头分轻度（WARNING）/重度（FAIL）两级
+  - `face_skin_tone` v1.1.0：偏暖分轻微（WARNING）/严重（FAIL）两级
+  - `eye_closure` v1.3.0：非对称闭合需 EAR<0.45 佐证才 FAIL
+  - `mouth_open` v1.5.0：收紧 FAIL（kMarFail=0.30），新增 WARNING 中间层
 
 **11. 自动化测试恢复**
 - `tests/test_plugins.cpp` 补充 `<fstream>` 和 `face_analyzer.hpp` 头文件
