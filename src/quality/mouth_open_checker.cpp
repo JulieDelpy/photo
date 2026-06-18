@@ -7,10 +7,10 @@ namespace photo {
 class MouthOpenChecker : public IQualityChecker {
 public:
     const char* name() const override { return "mouth_open_check"; }
-    const char* version() const override { return "1.4.0"; }
+    const char* version() const override { return "1.5.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
-                      const IDPhotoStandard& std) override {
+                      const IDPhotoStandard&) override {
         CheckResult result;
         result.checker_name = name();
         result.category = "state";
@@ -22,24 +22,25 @@ public:
             return result;
         }
 
-        constexpr double kMarTier1 = 0.25;
-        constexpr double kMarTier2 = 0.18;
-        constexpr double kMarLow   = 0.13;   // 低于此 MAR 不检测内口腔（闭嘴状态 landmarks 不准）
-        constexpr int    kInnerMouthVDark  = 80;
-        constexpr int    kInnerMouthVBright = 160;
-        constexpr int    kTeethLowS = 100;   // 牙齿饱和度低（偏白）
+        constexpr double kMarFail = 0.30;
+        constexpr double kMarWarn = 0.25;
+        constexpr double kMarLow = 0.13;
+        constexpr int kInnerMouthVDark = 80;
+        constexpr int kInnerMouthVBright = 160;
 
         result.actual_value = face.mar;
-        result.max_threshold = kMarTier1;
+        result.max_threshold = kMarFail;
 
-        double oral_v = 0, oral_s = 0;
+        double oral_v = 0.0;
+        double oral_s = 0.0;
         double teeth_ratio = 0.0;
         int teeth_pixels = 0;
 
         if (face.landmarks.size() >= 68) {
             std::vector<cv::Point> inner_pts;
-            for (int i = 61; i <= 67; i++)
+            for (int i = 61; i <= 67; i++) {
                 inner_pts.push_back(face.landmarks[i]);
+            }
             if (!inner_pts.empty()) {
                 cv::Rect inner_rect = cv::boundingRect(inner_pts);
                 inner_rect &= cv::Rect(0, 0, image.cols, image.rows);
@@ -47,20 +48,17 @@ public:
                     cv::Mat roi = image(inner_rect);
                     cv::Mat hsv;
                     cv::cvtColor(roi, hsv, cv::COLOR_BGR2HSV);
-                    // V channel (brightness)
-                    cv::Mat v_channel;
-                    cv::extractChannel(hsv, v_channel, 2);
-                    oral_v = cv::mean(v_channel).val[0];
-                    // S channel (saturation) — 牙齿低S，嘴唇/牙龈高S
                     std::vector<cv::Mat> hsv_channels;
                     cv::split(hsv, hsv_channels);
                     oral_s = cv::mean(hsv_channels[1]).val[0];
+                    oral_v = cv::mean(hsv_channels[2]).val[0];
                 }
             }
 
             std::vector<cv::Point> mouth_pts;
-            for (int i = 48; i <= 67; i++)
+            for (int i = 48; i <= 67; i++) {
                 mouth_pts.push_back(face.landmarks[i]);
+            }
             cv::Rect mouth_rect = cv::boundingRect(mouth_pts);
             float cx = mouth_rect.x + mouth_rect.width * 0.5f;
             float cy = mouth_rect.y + mouth_rect.height * 0.5f;
@@ -90,41 +88,44 @@ public:
             }
         }
 
-        bool mouth_dark   = (oral_v < kInnerMouthVDark);
+        bool mouth_dark = (oral_v < kInnerMouthVDark);
         bool mouth_bright = (oral_v > kInnerMouthVBright);
-        bool is_teeth     = mouth_bright && (oral_s < kTeethLowS);  // 亮+低饱和=牙齿
-        bool is_teeth_hard = mouth_bright && (oral_s < 70) && (oral_v > 180);  // 半张嘴区间更严格
-        bool is_low_mar_teeth = (face.mar > 0.045) && (face.mar < kMarLow)
-                             && (oral_v > 180) && (oral_s < 85);
-        bool tier1 = (face.mar > kMarTier1);
-        bool tier2 = (face.mar > kMarTier2);
+        bool low_mar_teeth_like = (face.mar > 0.045) && (face.mar < kMarLow)
+                               && (oral_v > 180) && (oral_s < 85);
+        bool teeth_hard = mouth_bright && (oral_s < 70) && (oral_v > 180);
+        bool visible_teeth = mouth_bright && (teeth_ratio > 0.50) && (oral_s < 80)
+                          && ((face.mar > 0.18) || low_mar_teeth_like);
+
+        bool fail_dark = (face.mar > kMarWarn) && mouth_dark;
+        bool high_mar_open = (face.mar > kMarFail) && mouth_bright
+                          && ((oral_v > 190) || (oral_s > 100 && teeth_ratio > 0.35));
+        bool fail_bright = high_mar_open || visible_teeth;
+        bool warn_bright = (face.mar > 0.22 && mouth_bright)
+                        || teeth_hard
+                        || low_mar_teeth_like;
+
         result.detail = "oral_v=" + std::to_string(static_cast<int>(oral_v))
                       + " oral_s=" + std::to_string(static_cast<int>(oral_s))
                       + " teeth_px=" + std::to_string(teeth_pixels)
                       + " teeth_ratio=" + std::to_string(teeth_ratio).substr(0, 5)
-                      + " low_mar_teeth=" + std::to_string(is_low_mar_teeth ? 1 : 0);
-
-        // 张嘴 → 暗腔/亮牙 都拦截
-        // 半张嘴(tier2) → 暗腔拦截 或 强牙齿信号(V>180+S<70)
-        // 闭嘴(!tier2) → 仅最强牙齿信号(V>180+S<70)，防止嘴唇反光误报
-        bool fail_dark   = tier2 && mouth_dark;
-        bool fail_bright = (tier1 && mouth_bright)          // 张嘴+亮区
-                        || (tier2 && is_teeth_hard)         // 半张嘴+强牙齿信号
-                        || (!tier2 && is_teeth_hard)        // 闭嘴仅保留最强牙齿信号
-                        || is_low_mar_teeth;                // 低MAR露齿：牙齿可见但嘴巴张幅很小
+                      + " low_mar_teeth=" + std::to_string(low_mar_teeth_like ? 1 : 0);
 
         if (fail_dark) {
             result.passed = false;
             result.severity = Severity::FAIL;
-            result.message = "张嘴: MAR="
-                           + std::to_string(face.mar).substr(0, 4)
-                           + " 口腔暗区 V=" + std::to_string(static_cast<int>(oral_v));
+            result.message = "张嘴: MAR=" + std::to_string(face.mar).substr(0, 4)
+                           + " 口腔V=" + std::to_string(static_cast<int>(oral_v));
         } else if (fail_bright) {
             result.passed = false;
             result.severity = Severity::FAIL;
-            result.message = "露牙: MAR="
-                           + std::to_string(face.mar).substr(0, 4)
-                           + " 口腔 V=" + std::to_string(static_cast<int>(oral_v))
+            result.message = "露齿: MAR=" + std::to_string(face.mar).substr(0, 4)
+                           + " 口腔V=" + std::to_string(static_cast<int>(oral_v))
+                           + " S=" + std::to_string(static_cast<int>(oral_s));
+        } else if (warn_bright || face.mar > kMarWarn) {
+            result.passed = false;
+            result.severity = Severity::WARNING;
+            result.message = "嘴部边缘状态: MAR=" + std::to_string(face.mar).substr(0, 4)
+                           + " 口腔V=" + std::to_string(static_cast<int>(oral_v))
                            + " S=" + std::to_string(static_cast<int>(oral_s));
         } else {
             result.passed = true;

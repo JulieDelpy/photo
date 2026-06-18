@@ -174,7 +174,6 @@ async function checkImageViaAPI(file) {
     const formData = new FormData();
     formData.append('image', file);
     formData.append('photo_type', document.getElementById('photoType').value);
-    formData.append('check_mode', document.getElementById('checkMode')?.value || 'final');
 
     const resp = await fetch(`${apiBase}/api/v1/check`, {
         method: 'POST',
@@ -191,7 +190,6 @@ function generateDemoReport() {
     return {
         photo_type: 'id_card_cn',
         photo_display_name: '第二代居民身份证照片 (GA标准) — 演示数据',
-        check_mode: document.getElementById('checkMode')?.value || 'final',
         overall_pass: true,
         total_checks: 40,
         passed_checks: 40,
@@ -375,7 +373,6 @@ function displayResults(report) {
 
     // ---- 两级智能判定 ----
     const checks = report.results || [];
-    const mode = report.check_mode || document.getElementById('checkMode')?.value || 'final';
     const backendFails = checks.filter(c => !c.passed && c.severity === 'fail');
     const softAdvisory  = checks.filter(c => !c.passed && c.severity === 'warning');
     const passCount = checks.filter(c => c.passed).length;
@@ -387,8 +384,7 @@ function displayResults(report) {
     const summaryBar = document.getElementById('summaryBar');
     if (effectivePass && warnCount > 0) {
         summaryBar.className = 'summary-bar warn';
-        const title = mode === 'raw' ? '原图可进入制证' : '未硬拒绝，需优化';
-        summaryBar.innerHTML = `<strong>${title}</strong> — `
+        summaryBar.innerHTML = `<strong>未硬拒绝，需优化</strong> — `
             + `${passCount}/${checks.length} 项通过，${warnCount} 项建议优化，0 项拒绝`;
     } else if (effectivePass) {
         summaryBar.className = 'summary-bar pass';
@@ -405,7 +401,6 @@ function displayResults(report) {
     const fi = report.face_info;
     let metaHtml = `<div class="tag-row">
         <span class="tag face">${report.photo_display_name || report.photo_type}</span>
-        <span class="tag">${mode === 'raw' ? '原图预检' : '成品严检'}</span>
         <span class="tag">${imgW}×${imgH}</span>
         <span class="tag">通过: ${passCount}</span>`;
     if (warnCount) metaHtml += `<span class="tag">建议: ${warnCount}</span>`;

@@ -9,7 +9,7 @@ namespace photo {
 class HeadPoseChecker : public IQualityChecker {
 public:
     const char* name() const override { return "head_pose_check"; }
-    const char* version() const override { return "1.3.1"; }
+    const char* version() const override { return "1.4.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& cfg) override {
@@ -62,14 +62,18 @@ public:
         double pm  = face.pitch_metric;
         double emr = face.eye_mouth_ratio;
         bool chin_up_2d = (pm >= 2.35) && (face.eye_rel_y <= 0.42) && (emr >= 0.55);
+        bool mild_chin_up_2d = chin_up_2d && pitch_abs <= max_pitch && pm < 3.20;
+        bool severe_chin_up_2d = chin_up_2d && !mild_chin_up_2d;
         double eff_max_pitch = max_pitch;
         if (!chin_cropped && !face_squashed
             && !chin_up_2d
             && pm >= 1.55 && pm <= 2.70 && emr >= 0.52 && emr <= 0.70)
             eff_max_pitch = 999.0;
         bool pitch_ok;
-        if (chin_up_2d) {
+        if (severe_chin_up_2d) {
             pitch_ok = false;
+        } else if (mild_chin_up_2d) {
+            pitch_ok = true;
         } else if (chin_cropped || face_squashed) {
             pitch_ok = (pitch_abs <= max_pitch);
         } else {
@@ -91,11 +95,18 @@ public:
                       + " chin_up=" + std::to_string(chin_up_2d ? 1 : 0);
 
         if (yaw_ok && pitch_ok && roll_ok) {
-            result.passed = true;
-            result.severity = Severity::PASS;
-            result.message = "头部姿态正常: yaw=" + f(yaw_abs)
-                           + " pitch=" + f(pitch_abs)
-                           + " tilt=" + f(tilt);
+            if (mild_chin_up_2d) {
+                result.passed = false;
+                result.severity = Severity::WARNING;
+                result.message = "轻微抬头/鼻孔略明显: pitch=" + f(pitch_abs)
+                               + " pm=" + f(pm) + " emr=" + f(emr);
+            } else {
+                result.passed = true;
+                result.severity = Severity::PASS;
+                result.message = "头部姿态正常: yaw=" + f(yaw_abs)
+                               + " pitch=" + f(pitch_abs)
+                               + " tilt=" + f(tilt);
+            }
         } else {
             result.passed = false;
             result.severity = Severity::FAIL;

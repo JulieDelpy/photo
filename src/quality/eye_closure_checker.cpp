@@ -2,17 +2,16 @@
 #include "photo/plugin/plugin_macros.hpp"
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
-#include <cmath>
 
 namespace photo {
 
 class EyeClosureChecker : public IQualityChecker {
 public:
     const char* name() const override { return "eye_closure_check"; }
-    const char* version() const override { return "1.2.0"; }
+    const char* version() const override { return "1.3.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
-                      const IDPhotoStandard& std) override {
+                      const IDPhotoStandard&) override {
         CheckResult result;
         result.checker_name = name();
         result.category = "state";
@@ -24,53 +23,46 @@ public:
             return result;
         }
 
-        // EAR 作为基础参考
         double ear = std::min(face.ear_left, face.ear_right);
-
-        // 像素级眼部纹理方差：睁眼时虹膜/瞳孔/巩膜边界产生高方差，
-        // 闭眼时只有均匀皮肤色，方差极低。
         EyeTexture texture = computeEyeTexture(image, face);
         double eye_texture_var = texture.min_var;
 
-        constexpr double kEarMin        = 0.20;
-        constexpr double kTextureVarMin = 400.0;  // 眼区灰度方差最低阈值（闭眼273 vs 正常736-3600）
+        constexpr double kEarMin = 0.20;
+        constexpr double kAsymmetricEarMax = 0.45;
+        constexpr double kTextureVarMin = 400.0;
         constexpr double kSingleEyeClosedVarMax = 320.0;
         constexpr double kOtherEyeTextureMin = 800.0;
 
+        bool ear_low = (ear < kEarMin);
+        bool texture_low = (eye_texture_var < kTextureVarMin);
+        bool asymmetric_closed = (texture.min_var < kSingleEyeClosedVarMax)
+                              && (texture.max_var > kOtherEyeTextureMin);
+        bool asymmetric_fail = asymmetric_closed && (ear < kAsymmetricEarMax);
+
         result.actual_value = eye_texture_var;
         result.min_threshold = kTextureVarMin;
-        // 附带 EAR 到 detail 字段便于调试
-        bool asymmetricClosed = (texture.min_var < kSingleEyeClosedVarMax)
-                             && (texture.max_var > kOtherEyeTextureMin);
         result.detail = "EAR=" + std::to_string(ear).substr(0, 5)
                       + " left_var=" + std::to_string(static_cast<int>(texture.left_var))
                       + " right_var=" + std::to_string(static_cast<int>(texture.right_var))
-                      + " asymmetric_closed=" + std::to_string(asymmetricClosed ? 1 : 0);
+                      + " asymmetric_closed=" + std::to_string(asymmetric_closed ? 1 : 0)
+                      + " asymmetric_fail=" + std::to_string(asymmetric_fail ? 1 : 0);
 
-        // 两级判定：纹理方差为主（像素级），EAR 为辅（几何级）
-        // 只有两者同时低才判 FAIL（双眼信号一致），仅纹理低为 WARNING（避免小眼/眼镜/大图误报）
-        bool earLow     = (ear < kEarMin);
-        bool textureLow = (eye_texture_var < kTextureVarMin);
-
-        if ((textureLow && earLow) || asymmetricClosed) {
+        if ((texture_low && ear_low) || asymmetric_fail) {
             result.passed = false;
             result.severity = Severity::FAIL;
             result.message = "疑似闭眼: 眼区纹理方差="
                            + std::to_string(static_cast<int>(eye_texture_var))
-                           + " (阈值" + std::to_string(static_cast<int>(kTextureVarMin)) + ")"
                            + ", EAR=" + std::to_string(ear).substr(0, 4);
-        } else if (textureLow && !earLow) {
+        } else if (texture_low || asymmetric_closed) {
             result.passed = false;
             result.severity = Severity::WARNING;
             result.message = "眼区纹理偏弱: 方差="
                            + std::to_string(static_cast<int>(eye_texture_var))
-                           + " (阈值" + std::to_string(static_cast<int>(kTextureVarMin)) + ")"
-                           + ", EAR=" + std::to_string(ear).substr(0, 4) + "(正常)";
-        } else if (earLow && !textureLow) {
+                           + ", EAR=" + std::to_string(ear).substr(0, 4);
+        } else if (ear_low) {
             result.passed = false;
             result.severity = Severity::WARNING;
-            result.message = "眼裂偏窄: EAR=" + std::to_string(ear).substr(0, 4)
-                           + " (阈值" + std::to_string(kEarMin).substr(0, 4) + ")";
+            result.message = "眼裂偏窄: EAR=" + std::to_string(ear).substr(0, 4);
         } else {
             result.passed = true;
             result.severity = Severity::PASS;
@@ -82,7 +74,6 @@ public:
     }
 
 private:
-    // 基于眼部区域的像素纹理方差评估眼睛是否睁开
     struct EyeTexture {
         double left_var = 100.0;
         double right_var = 100.0;
@@ -92,15 +83,16 @@ private:
 
     EyeTexture computeEyeTexture(const cv::Mat& image, const FaceInfo& face) const {
         EyeTexture texture;
-        if (face.landmarks.size() < 48) return texture;  // 无眼部关键点，默认正常
+        if (face.landmarks.size() < 48) return texture;
 
         cv::Mat gray;
-        if (image.channels() == 3)
+        if (image.channels() == 3) {
             cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
-        else
+        } else {
             gray = image;
+        }
 
-        texture.left_var  = eyeRegionVariance(gray, face.landmarks, 36);
+        texture.left_var = eyeRegionVariance(gray, face.landmarks, 36);
         texture.right_var = eyeRegionVariance(gray, face.landmarks, 42);
         texture.min_var = std::min(texture.left_var, texture.right_var);
         texture.max_var = std::max(texture.left_var, texture.right_var);
@@ -108,41 +100,37 @@ private:
     }
 
     double eyeRegionVariance(const cv::Mat& gray,
-                             const std::vector<cv::Point2f>& lm, int es) const {
+                             const std::vector<cv::Point2f>& lm,
+                             int es) const {
         if (es + 6 > static_cast<int>(lm.size())) return 100.0;
 
-        // 计算眼部 6 个关键点的包围盒
-        float minX = lm[es].x, maxX = lm[es].x;
-        float minY = lm[es].y, maxY = lm[es].y;
+        float min_x = lm[es].x;
+        float max_x = lm[es].x;
+        float min_y = lm[es].y;
+        float max_y = lm[es].y;
         for (int i = 1; i < 6; i++) {
-            minX = std::min(minX, lm[es+i].x);
-            maxX = std::max(maxX, lm[es+i].x);
-            minY = std::min(minY, lm[es+i].y);
-            maxY = std::max(maxY, lm[es+i].y);
+            min_x = std::min(min_x, lm[es + i].x);
+            max_x = std::max(max_x, lm[es + i].x);
+            min_y = std::min(min_y, lm[es + i].y);
+            max_y = std::max(max_y, lm[es + i].y);
         }
 
-        // 扩展 20% 以包含眼周纹理（虹膜/巩膜边界）
-        float cx = (minX + maxX) / 2.0f;
-        float cy = (minY + maxY) / 2.0f;
-        float halfW = (maxX - minX) * 0.6f;
-        float halfH = (maxY - minY) * 0.6f;
+        float cx = (min_x + max_x) / 2.0f;
+        float cy = (min_y + max_y) / 2.0f;
+        float half_w = (max_x - min_x) * 0.6f;
+        float half_h = (max_y - min_y) * 0.6f;
 
-        int x0 = std::max(0, static_cast<int>(cx - halfW));
-        int y0 = std::max(0, static_cast<int>(cy - halfH));
-        int x1 = std::min(gray.cols - 1, static_cast<int>(cx + halfW));
-        int y1 = std::min(gray.rows - 1, static_cast<int>(cy + halfH));
-
+        int x0 = std::max(0, static_cast<int>(cx - half_w));
+        int y0 = std::max(0, static_cast<int>(cy - half_h));
+        int x1 = std::min(gray.cols - 1, static_cast<int>(cx + half_w));
+        int y1 = std::min(gray.rows - 1, static_cast<int>(cy + half_h));
         if (x1 <= x0 || y1 <= y0) return 100.0;
 
-        cv::Rect roi(x0, y0, x1 - x0, y1 - y0);
-        cv::Mat eyePatch = gray(roi);
-
-        // 计算眼区的灰度标准差 → 纹理强度
-        cv::Scalar mean, stddev;
-        cv::meanStdDev(eyePatch, mean, stddev);
-        double variance = stddev.val[0] * stddev.val[0];
-
-        return variance;
+        cv::Mat eye_patch = gray(cv::Rect(x0, y0, x1 - x0, y1 - y0));
+        cv::Scalar mean;
+        cv::Scalar stddev;
+        cv::meanStdDev(eye_patch, mean, stddev);
+        return stddev.val[0] * stddev.val[0];
     }
 };
 

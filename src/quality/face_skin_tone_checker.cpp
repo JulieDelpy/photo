@@ -7,7 +7,7 @@ namespace photo {
 class FaceSkinToneChecker : public IQualityChecker {
 public:
     const char* name() const override { return "face_skin_tone_check"; }
-    const char* version() const override { return "1.0.0"; }
+    const char* version() const override { return "1.1.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard&) override {
@@ -22,7 +22,6 @@ public:
             return result;
         }
 
-        // 取面部中心 60% 区域，排除头发和背景边缘
         cv::Rect roi = face.bbox;
         int margin_x = roi.width / 5;
         int margin_y = roi.height / 5;
@@ -39,46 +38,54 @@ public:
             return result;
         }
 
-        cv::Mat face_roi = image(roi);
         cv::Mat ycrcb;
-        cv::cvtColor(face_roi, ycrcb, cv::COLOR_BGR2YCrCb);
+        cv::cvtColor(image(roi), ycrcb, cv::COLOR_BGR2YCrCb);
 
-        // 分离 Cr/Cb 通道，肤色在这两个通道上聚拢
         std::vector<cv::Mat> channels;
         cv::split(ycrcb, channels);
-        cv::Mat Cr = channels[1];
-        cv::Mat Cb = channels[2];
+        cv::Mat cr_channel = channels[1];
+        cv::Mat cb_channel = channels[2];
 
         cv::Scalar cr_mean, cr_std, cb_mean, cb_std;
-        cv::meanStdDev(Cr, cr_mean, cr_std);
-        cv::meanStdDev(Cb, cb_mean, cb_std);
+        cv::meanStdDev(cr_channel, cr_mean, cr_std);
+        cv::meanStdDev(cb_channel, cb_mean, cb_std);
 
         double cr = cr_mean.val[0];
         double cb = cb_mean.val[0];
         double cr_sd = cr_std.val[0];
         double cb_sd = cb_std.val[0];
+        double cr_cb_ratio = (cb > 0.0) ? cr / cb : 0.0;
 
-        // 亚洲肤色在 YCrCb 空间的正常范围
-        // Cb 下限从 pass 照片统计得出：min=107，留余量设 105
-        constexpr double kCrMin = 135.0, kCrMax = 165.0;
-        constexpr double kCbMin = 105.0, kCbMax = 130.0;
-        // Cr/Cb 比值过高说明偏红/偏暖（pass 照片 1.22-1.42）
-        constexpr double kCrCbRatioMax = 1.45;
-        // Cr/Cb 标准差过高说明色彩不均匀
-        constexpr double kCrSdMax = 25.0;
-        constexpr double kCbSdMax = 20.0;
+        constexpr double kCrMin = 135.0;
+        constexpr double kCrMax = 165.0;
+        constexpr double kCbMin = 105.0;
+        constexpr double kCbMax = 130.0;
+        constexpr double kCrCbRatioWarnMax = 1.45;
+        constexpr double kCrCbRatioFailMax = 1.60;
+        constexpr double kCrSdWarnMax = 25.0;
+        constexpr double kCbSdWarnMax = 20.0;
+        constexpr double kCrSdFailMax = 35.0;
+        constexpr double kCbSdFailMax = 30.0;
 
-        double cr_cb_ratio = (cb > 0) ? cr / cb : 0;
+        bool cr_ok = (cr >= kCrMin && cr <= kCrMax);
+        bool cb_ok = (cb >= kCbMin && cb <= kCbMax);
+        bool ratio_ok = (cr_cb_ratio <= kCrCbRatioWarnMax);
+        bool cr_sd_ok = (cr_sd <= kCrSdWarnMax);
+        bool cb_sd_ok = (cb_sd <= kCbSdWarnMax);
+        bool severe = (cr < kCrMin - 10.0) || (cr > kCrMax + 10.0)
+                   || (cb < kCbMin - 10.0) || (cb > kCbMax + 10.0)
+                   || (cr_cb_ratio > kCrCbRatioFailMax)
+                   || (cr_sd > kCrSdFailMax)
+                   || (cb_sd > kCbSdFailMax);
 
         result.actual_value = cr;
         result.min_threshold = kCrMin;
         result.max_threshold = kCrMax;
-
-        bool cr_ok = (cr >= kCrMin && cr <= kCrMax);
-        bool cb_ok = (cb >= kCbMin && cb <= kCbMax);
-        bool ratio_ok = (cr_cb_ratio <= kCrCbRatioMax);
-        bool cr_sd_ok = (cr_sd <= kCrSdMax);
-        bool cb_sd_ok = (cb_sd <= kCbSdMax);
+        result.detail = "Cr=" + std::to_string(static_cast<int>(cr))
+                      + " Cb=" + std::to_string(static_cast<int>(cb))
+                      + " CrCb=" + std::to_string(cr_cb_ratio).substr(0, 4)
+                      + " CrSD=" + std::to_string(static_cast<int>(cr_sd))
+                      + " CbSD=" + std::to_string(static_cast<int>(cb_sd));
 
         if (cr_ok && cb_ok && ratio_ok && cr_sd_ok && cb_sd_ok) {
             result.passed = true;
@@ -87,22 +94,20 @@ public:
                            + " Cb=" + std::to_string(static_cast<int>(cb));
         } else {
             result.passed = false;
-            result.severity = Severity::FAIL;
-            std::string msg = "面部肤色异常";
-            if (!ratio_ok)
-                msg += ": 偏暖/偏红 Cr/Cb=" + std::to_string(static_cast<int>(cr_cb_ratio * 100))
-                    + "% (阈值≤" + std::to_string(static_cast<int>(kCrCbRatioMax * 100)) + "%)";
-            else if (!cb_ok)
-                msg += ": Cb=" + std::to_string(static_cast<int>(cb))
-                    + " (正常" + std::to_string(static_cast<int>(kCbMin))
-                    + "-" + std::to_string(static_cast<int>(kCbMax)) + ")";
-            else if (!cr_ok)
-                msg += ": Cr=" + std::to_string(static_cast<int>(cr))
-                    + " (正常" + std::to_string(static_cast<int>(kCrMin))
-                    + "-" + std::to_string(static_cast<int>(kCrMax)) + ")";
-            else msg += ": 色彩不均 CrSD=" + std::to_string(static_cast<int>(cr_sd))
-                      + " CbSD=" + std::to_string(static_cast<int>(cb_sd));
-            result.message = msg;
+            result.severity = severe ? Severity::FAIL : Severity::WARNING;
+            std::string prefix = severe ? "面部肤色异常" : "面部肤色边缘";
+            if (!ratio_ok) {
+                result.message = prefix + ": 偏暖/偏红 Cr/Cb="
+                               + std::to_string(static_cast<int>(cr_cb_ratio * 100))
+                               + "%";
+            } else if (!cb_ok) {
+                result.message = prefix + ": Cb=" + std::to_string(static_cast<int>(cb));
+            } else if (!cr_ok) {
+                result.message = prefix + ": Cr=" + std::to_string(static_cast<int>(cr));
+            } else {
+                result.message = prefix + ": CrSD=" + std::to_string(static_cast<int>(cr_sd))
+                               + " CbSD=" + std::to_string(static_cast<int>(cb_sd));
+            }
         }
         return result;
     }
