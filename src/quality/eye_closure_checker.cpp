@@ -9,7 +9,7 @@ namespace photo {
 class EyeClosureChecker : public IQualityChecker {
 public:
     const char* name() const override { return "eye_closure_check"; }
-    const char* version() const override { return "1.1.0"; }
+    const char* version() const override { return "1.2.0"; }
 
     CheckResult check(const cv::Mat& image, const FaceInfo& face,
                       const IDPhotoStandard& std) override {
@@ -29,22 +29,30 @@ public:
 
         // 像素级眼部纹理方差：睁眼时虹膜/瞳孔/巩膜边界产生高方差，
         // 闭眼时只有均匀皮肤色，方差极低。
-        double eye_texture_var = computeEyeTextureVariance(image, face);
+        EyeTexture texture = computeEyeTexture(image, face);
+        double eye_texture_var = texture.min_var;
 
         constexpr double kEarMin        = 0.20;
         constexpr double kTextureVarMin = 400.0;  // 眼区灰度方差最低阈值（闭眼273 vs 正常736-3600）
+        constexpr double kSingleEyeClosedVarMax = 320.0;
+        constexpr double kOtherEyeTextureMin = 800.0;
 
         result.actual_value = eye_texture_var;
         result.min_threshold = kTextureVarMin;
         // 附带 EAR 到 detail 字段便于调试
-        result.detail = "EAR=" + std::to_string(ear).substr(0, 5);
+        bool asymmetricClosed = (texture.min_var < kSingleEyeClosedVarMax)
+                             && (texture.max_var > kOtherEyeTextureMin);
+        result.detail = "EAR=" + std::to_string(ear).substr(0, 5)
+                      + " left_var=" + std::to_string(static_cast<int>(texture.left_var))
+                      + " right_var=" + std::to_string(static_cast<int>(texture.right_var))
+                      + " asymmetric_closed=" + std::to_string(asymmetricClosed ? 1 : 0);
 
         // 两级判定：纹理方差为主（像素级），EAR 为辅（几何级）
         // 只有两者同时低才判 FAIL（双眼信号一致），仅纹理低为 WARNING（避免小眼/眼镜/大图误报）
         bool earLow     = (ear < kEarMin);
         bool textureLow = (eye_texture_var < kTextureVarMin);
 
-        if (textureLow && earLow) {
+        if ((textureLow && earLow) || asymmetricClosed) {
             result.passed = false;
             result.severity = Severity::FAIL;
             result.message = "疑似闭眼: 眼区纹理方差="
@@ -75,8 +83,16 @@ public:
 
 private:
     // 基于眼部区域的像素纹理方差评估眼睛是否睁开
-    double computeEyeTextureVariance(const cv::Mat& image, const FaceInfo& face) const {
-        if (face.landmarks.size() < 48) return 100.0;  // 无眼部关键点，默认正常
+    struct EyeTexture {
+        double left_var = 100.0;
+        double right_var = 100.0;
+        double min_var = 100.0;
+        double max_var = 100.0;
+    };
+
+    EyeTexture computeEyeTexture(const cv::Mat& image, const FaceInfo& face) const {
+        EyeTexture texture;
+        if (face.landmarks.size() < 48) return texture;  // 无眼部关键点，默认正常
 
         cv::Mat gray;
         if (image.channels() == 3)
@@ -84,10 +100,11 @@ private:
         else
             gray = image;
 
-        double var_left  = eyeRegionVariance(gray, face.landmarks, 36);
-        double var_right = eyeRegionVariance(gray, face.landmarks, 42);
-
-        return std::min(var_left, var_right);
+        texture.left_var  = eyeRegionVariance(gray, face.landmarks, 36);
+        texture.right_var = eyeRegionVariance(gray, face.landmarks, 42);
+        texture.min_var = std::min(texture.left_var, texture.right_var);
+        texture.max_var = std::max(texture.left_var, texture.right_var);
+        return texture;
     }
 
     double eyeRegionVariance(const cv::Mat& gray,
